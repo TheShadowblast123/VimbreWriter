@@ -1,11 +1,12 @@
-# vibreoffice
+# VimbreWriter
 
-*(Unfortunately, vibreoffice is still in an experimental stage, and I no longer have much time to work on it. Hope you enjoy it anyway!)*
+*(Unfortunately, vibreoffice was in an experimental stage, and the creator [seanyeh](https://.github.com/seanyeh) no longer has much time to work on it. So I guess I'm learning Visual basic to pick up the mantel)*
 
-vibreoffice is an extension for Libreoffice and OpenOffice that brings some of
-your favorite key bindings from vi/vim to your favorite office suite. It is
-obviously not meant to be feature-complete, but hopefully will be useful to
-both vi/vim neophytes and experts alike.
+VimbreWriter is an extension for Libreoffice and OpenOffice that brings some of
+your favorite key bindings from vi/vim to your favorite office suite, with a heavy focus on librewriter.
+
+Most of the rest of this readme is just going to be the original readme until I actually know what I'm doing.
+As of this first commit the project is not in a working state.
 
 ### Installation/Usage
 
