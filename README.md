@@ -54,14 +54,6 @@ my patience.
     - Unlike vi/vim, movement keys will wrap to the next line
     - Due to line wrapping, you may find your cursor move up/down a line for
       commands that would otherwise leave you in the same position (such as `dd`)
-- vimbrewriter does not have contextual awareness. What I mean by that is that
-  it does not keep track of which parentheses/braces match. Hence, you may have
-  unexpected behavior (using commands such as `di(`) if your document has
-  syntatically uneven parentheses/braces or nesting of such symbols. I don't
-  intend to fix this for now, as I don't believe this is a critical feature for
-  word processing.
-- Using `d`, `c` (or any of their variants) will temporarily bring you into
-  Visual mode. This is intentional and should not have any noticeable effects.
 
 vimbrewriter is new, so it is bound to have plenty of bugs. Please let me know
 if you run into anything!
