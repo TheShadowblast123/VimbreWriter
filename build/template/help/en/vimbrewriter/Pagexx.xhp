@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <helpdocument version="1.0">
    <meta>
-      <topic id="vibreoffice.Pagexx">
-         <title id="tit" xml-lang="en">Vibreoffice - Vi-Mode Extension : Write the title here</title>
-         <filename>/vibreoffice/Pagexx.xhp</filename>
+      <topic id="vimbrewriter.Pagexx">
+         <title id="tit" xml-lang="en">Vimbrewriter - Vi-Mode Extension : Write the title here</title>
+         <filename>/vimbrewriter/Pagexx.xhp</filename>
       </topic>
    </meta>
    <body>
