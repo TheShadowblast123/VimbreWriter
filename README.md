@@ -36,9 +36,12 @@ vimbrewriter currently supports:
 - Replace: `r`
 - Deletion: `x`, `d`, `c`, `s`, `D`, `C`, `S`, `dd`, `cc`
     - Plus movement and number modifiers: e.g. `5dw`, `c3j`, `2dfe`
-    - Delete a/inner block: e.g. `di(`, `da{`, `ci[`, `ci"`, `ca'`, `dit`
+    - Delete a/inner block: e.g. `di(`, `da{`, `ci[`, `ci"`, `ca'`
 - Undo/redo: `u`, `C-r`
 - Copy/paste: `y`, `p`, `P` (using system clipboard, not vim-like registers)
+### Added functionality
+- (`d`/`c`)(`a`/`i`)(`,`/`.`) Delete/Change Around/Inside Commas/Periods for enhanced word editing
+
 
 ### Known differences/issues
 
@@ -46,6 +49,7 @@ If you are familiar with vi/vim, then vimbrewriter should give very few
 surprises. However, there are some differences, primarily due to word
 processor-text editor differences or limitations of the LibreOffice API and/or
 my patience.
+- I'm pretty sure I broke `dit`
 - Currently, I am using LibreOffice's built-in word/sentence movement which
   differs from vi's. It's sort of broken now but I plan to fix it eventually.
 - The concept of lines in a text editor is not quite analogous to that of a
@@ -54,6 +58,8 @@ my patience.
     - Unlike vi/vim, movement keys will wrap to the next line
     - Due to line wrapping, you may find your cursor move up/down a line for
       commands that would otherwise leave you in the same position (such as `dd`)
+      this has mostly been  mitigated but a side effect is `dd` will not deleted
+      entire paragraphs
 
 vimbrewriter is new, so it is bound to have plenty of bugs. Please let me know
 if you run into anything!
