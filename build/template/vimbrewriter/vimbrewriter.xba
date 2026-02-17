@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
 <script:module xmlns:script="http://openoffice.org/2000/script" script:name="vimbrewriter" script:language="StarBasic">
+
 &apos; vibreoffice - Vi Mode for LibreOffice/OpenOffice
 &apos;
 &apos; The MIT License (MIT)
@@ -875,18 +876,9 @@ Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
             &apos; f,F,t,T searching — convert int keyChar to string for search
             Case &quot;f&quot;, &quot;t&quot;, &quot;F&quot;, &quot;T&quot;:
                 bMatched = ProcessSearchKey(oTextCursor, getMovementModifier(), Chr(keyChar), bExpand)
-            Case &quot;a&quot;:
-				Dim around as String
-                around = GetAroundSymbol(Chr(keyChar))
-				If around Then
-					bMatched = True
-				End If
-			Case &quot;i&quot;:
-				Dim inside as String
-                inside = GetInsideSymbol(Chr(keyChar))
-				If inside Then
-					bMatched = True
-				End If
+            Case &quot;a&quot;, &quot;i&quot;:
+                bMatched = GetSymbol(Chr(keyChar), getMovementModifier())
+                bSetCursor = False
             Case Else:
                 bSetCursor = False
                 bMatched = False
@@ -966,210 +958,101 @@ Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
 
     ProcessMovementKey = bMatched
 End Function
-Function GetAroundSymbol(symbol As String) As String
-	Dim selection, around, inside, endSymbol as String
-	Dim startpos, endpos, diff, i as Integer
-	Select Case symbol
-        Case &quot;(&quot;, &quot;)&quot;, &quot;{&quot;, &quot;}&quot;, &quot;[&quot;, &quot;]&quot;, &quot;&lt;&quot;, &quot;&gt;&quot;, &quot;&apos;&quot;, Chr(34):
-            Select Case symbol
-                Case &quot;(&quot;, &quot;)&quot;:
-                    symbol = &quot;(&quot; : endSymbol = &quot;)&quot;
-                Case &quot;{&quot;, &quot;}&quot;:
-                    symbol = &quot;{&quot; : endSymbol = &quot;}&quot;
-                Case &quot;[&quot;, &quot;]&quot;:
-                    symbol = &quot;[&quot; : endSymbol = &quot;]&quot;
-                Case &quot;&lt;&quot;, &quot;&gt;&quot;:
-                    symbol = &quot;&lt;&quot; : endSymbol = &quot;&gt;&quot;
-                Case &quot;&apos;&quot;:
-                    symbol = &quot;‘&quot; : endSymbol = &quot;’&quot;
-                    GetAroundSymbol = FindAroundMatchingPair(symbol, endSymbol)
-                    If GetAroundSymbol = &quot;&quot; Then
-                    	GetAroundSymbol = FindAroundMatchingPair(&quot;&apos;&quot;, &quot;&apos;&quot;)
-                    	Exit Function
-                    End If
-                Case Chr(34):
-                    symbol = &quot;“&quot; : endSymbol = &quot;”&quot;
-                    GetAroundSymbol = FindAroundMatchingPair(symbol, endSymbol)
-                    If GetAroundSymbol = &quot;&quot; Then
-                    	GetAroundSymbol = FindAroundMatchingPair(Chr(34), Chr(34))
-                    	Exit Function
-                    End If
-            End Select
-        Case Else:
-            GetAroundSymbol = &quot;&quot;
-            Exit Function
-	    End Select
-	GetAroundSymbol = FindAroundMatchingPair( symbol, endSymbol)
 
-End Function
-Function GetInsideSymbol(symbol As String) As String
-	Dim selection, around, inside, endSymbol as String
-	Dim startpos, endpos, diff, i as Integer
-	Select Case symbol
-        Case &quot;(&quot;, &quot;)&quot;, &quot;{&quot;, &quot;}&quot;, &quot;[&quot;, &quot;]&quot;, &quot;&lt;&quot;, &quot;&gt;&quot;, &quot;&apos;&quot;, Chr(34):
-            Select Case symbol
-                Case &quot;(&quot;, &quot;)&quot;:
-                    symbol = &quot;(&quot; : endSymbol = &quot;)&quot;
-                Case &quot;{&quot;, &quot;}&quot;:
-                    symbol = &quot;{&quot; : endSymbol = &quot;}&quot;
-                Case &quot;[&quot;, &quot;]&quot;:
-                    symbol = &quot;[&quot; : endSymbol = &quot;]&quot;
-                Case &quot;&lt;&quot;, &quot;&gt;&quot;:
-                    symbol = &quot;&lt;&quot; : endSymbol = &quot;&gt;&quot;
-                Case &quot;&apos;&quot;:
-                    symbol = &quot;‘&quot; : endSymbol = &quot;’&quot;
-                    GetAroundSymbol = FindMatchingPair(oTextCursor, symbol, endSymbol)
-                    If GetAroundSymbol = &quot;&quot; Then
-                    	GetAroundSymbol = FindMatchingPair(&quot;&apos;&quot;, &quot;&apos;&quot;)
-                    	Exit Function
-                    End If
-                Case Chr(34):
-                    symbol = &quot;“&quot; : endSymbol = &quot;”&quot;
-                    GetAroundSymbol = FindMatchingPair(symbol, endSymbol)
-                    If GetAroundSymbol = &quot;&quot; Then
-                    	GetAroundSymbol = FindMatchingPair(Chr(34), Chr(34))
-                    	Exit Function
-                    End If
-            End Select
-        Case Else:
-            GetAroundSymbol = &quot;&quot;
+Function GetSymbol(symbol As String, modifier As String) As Boolean
+    Dim endSymbol As String
+    Select Case symbol
+        Case &quot;(&quot;, &quot;)&quot;
+            symbol = &quot;(&quot; : endSymbol = &quot;)&quot;
+        Case &quot;{&quot;, &quot;}&quot;
+            symbol = &quot;{&quot; : endSymbol = &quot;}&quot;
+        Case &quot;[&quot;, &quot;]&quot;
+            symbol = &quot;[&quot; : endSymbol = &quot;]&quot;
+        Case &quot;&lt;&quot;, &quot;&gt;&quot;
+            symbol = &quot;&lt;&quot; : endSymbol = &quot;&gt;&quot;
+        Case &quot;&apos;&quot;:
+            symbol = &quot;‘&quot; : endSymbol = &quot;’&quot;
+            GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
+            If GetSymbol = &quot;&quot; Then
+            	GetSymbol = FindMatchingPair(&quot;&apos;&quot;, &quot;&apos;&quot;, modifier)
+            	Exit Function
+            End If
+        Case Chr(34):
+            symbol = &quot;“&quot; : endSymbol = &quot;”&quot;
+            GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
+            If GetSymbol = &quot;&quot; Then
+            	GetSymbol = FindMatchingPair(Chr(34), Chr(34), modifier)
+            	Exit Function
+            End If
+        Case Else
+            GetSymbol = False
             Exit Function
-	    End Select
-	GetAroundSymbol = FindMatchingPair(symbol, endSymbol)
-
+    End Select
+    GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
 End Function
-Function FindAroundMatchingPair(startChar As String, endChar As String) As String
+
+Function FindMatchingPair(startChar As String, endChar As String, modifier As String) As Boolean
     Dim oDoc As Object
-    Dim oViewCursor As Object
     Dim oCursor As Object
     Dim oTempCursor As Object
-    Dim i As Integer
-    Dim j As Integer
+    Dim i As Integer, j As Integer
     Dim foundForward As Boolean
     Dim forwardPos As Object
-    Dim backwardPos As Object
 
-    &apos; Get the current document and view cursor
-    oViewCursor = getCursor()
+    oDoc = ThisComponent
 
-
-    &apos; Create a text cursor starting at the current position
-    Set oCursor = oDoc.Text.createTextCursorByRange(oViewCursor.getStart())
-
+    &apos; Search forward for endChar from current view cursor position
+    Set oCursor = oDoc.Text.createTextCursorByRange(getCursor().getStart())
     foundForward = False
     For i = 1 To 1000
-        &apos; Move one character right (without selecting) to advance
-		If Not oCursor.goRight(1, False) Then
-		    Exit For
-		End If
-        &apos; Create a temporary cursor to inspect the character at the new position
-        Set oTempCursor = oDoc.Text.createTextCursorByRange(oCursor.getStart())
-        oTempCursor.goRight(1, True)   &apos; select the current character
-        If oTempCursor.getString() = endChar Then
-            foundForward = True
-            Set forwardPos = oTempCursor.getStart()   &apos; remember its start position
-            Exit For
-        End If
-    Next i
-
-    If Not foundForward Then
-        FindMatchingPair = &quot;&quot;
-        Exit Function
-    End If
-
-
-    &apos; Start a new cursor at the position of forwardChar
-    Set oCursor = oDoc.Text.createTextCursorByRange(forwardPos)
-    For j = 1 To 2000
-		If Not oCursor.goLeft(1, False) Then
-		    Exit For
-		End If
-        &apos; Inspect the character at this new position
+        If Not oCursor.goRight(1, False) Then Exit For
         Set oTempCursor = oDoc.Text.createTextCursorByRange(oCursor.getStart())
         oTempCursor.goRight(1, True)
-        If oTempCursor.getString() = startChar Then
-            Set backwardPos = oTempCursor.getStart()
-            &apos; Now build a text range from backwardPos to forwardPos (inclusive)
-            Dim oRange As Object
-            Set oRange = oDoc.Text.createTextCursorByRange(backwardPos)
-            &apos; Move to the end of forwardChar to include it in the range
-            Dim forwardEnd As Object
-            Set forwardEnd = oDoc.Text.createTextCursorByRange(forwardPos)
-            forwardEnd.goRight(1, False)   &apos; now at the position just after forwardChar
-            oRange.gotoRange(forwardEnd, True)   &apos; extend selection to include forwardChar
-            FindMatchingPair = oRange.getString()
-            Exit Function
-        End If
-    Next j
-
-    &apos; If backwardChar not found within 2000 steps
-    FindMatchingPair = &quot;&quot;
-End Function
-Function FindInsideMatchingPair(startChar As String, endChar As String) As String
-    Dim oDoc As Object
-    Dim oViewCursor As Object
-    Dim oCursor As Object
-    Dim oTempCursor As Object
-    Dim i As Integer
-    Dim j As Integer
-    Dim foundForward As Boolean
-    Dim forwardPos As Object
-    Dim backwardPos As Object
-
-   
-    oViewCursor = getCursor()
-
-    &apos; Create a text cursor starting at the current position
-    Set oCursor = oDoc.Text.createTextCursorByRange(oViewCursor.getStart())
-
-    foundForward = False
-    For i = 1 To 1000
-        &apos; Move one character right (without selecting) to advance
-		If Not oCursor.goRight(1, False) Then
-		    Exit For
-		End If
-        &apos; Create a temporary cursor to inspect the character at the new position
-        Set oTempCursor = oDoc.Text.createTextCursorByRange(oCursor.getStart())
-        oTempCursor.goRight(1, True)   &apos; select the current character
         If oTempCursor.getString() = endChar Then
             foundForward = True
-            Set forwardPos = oTempCursor.getStart()   &apos; remember its start position
+            Set forwardPos = oTempCursor.getStart()
             Exit For
         End If
     Next i
 
     If Not foundForward Then
-        FindInsideMatchingPair = &quot;&quot;
+        FindMatchingPair = False
         Exit Function
     End If
 
-
-    &apos; Start a new cursor at the position of forwardChar
+    &apos; Search backward from forwardPos for startChar
     Set oCursor = oDoc.Text.createTextCursorByRange(forwardPos)
     For j = 1 To 2000
-		If Not oCursor.goLeft(1, False) Then
-		    Exit For
-		End If
-        &apos; Inspect the character at this new position
+        If Not oCursor.goLeft(1, False) Then Exit For
         Set oTempCursor = oDoc.Text.createTextCursorByRange(oCursor.getStart())
         oTempCursor.goLeft(1, True)
         If oTempCursor.getString() = startChar Then
-			oTempCursor.goRight(1, True)
-            Set backwardPos = oTempCursor.getStart()
-            &apos; Now build a text range from backwardPos to forwardPos (inclusive)
-            Dim oRange As Object
-            Set oRange = oDoc.Text.createTextCursorByRange(backwardPos)
-            &apos; Move to the end of forwardChar to include it in the range
-            Dim forwardEnd As Object
-            Set forwardEnd = oDoc.Text.createTextCursorByRange(forwardPos)
-            oRange.gotoRange(forwardEnd, True)   &apos; extend selection to include forwardChar
-            FindInsideMatchingPair = oRange.getString()
+            Dim startPos As Object
+            Dim endPos As Object
+            Dim oEndCursor As Object
+
+            If modifier = &quot;a&quot; Then
+                Set startPos = oTempCursor.getStart()
+                Set oEndCursor = oDoc.Text.createTextCursorByRange(forwardPos)
+                oEndCursor.goRight(1, False)
+                Set endPos = oEndCursor.getStart()
+            Else &apos; &quot;i&quot;
+                oTempCursor.goRight(1, True)
+                Set startPos = oTempCursor.getStart()
+                Set endPos = forwardPos
+            End If
+
+            &apos; Move the VIEW cursor to startPos, then select to endPos
+            &apos; getTextCursor() derives from getCursor(), so this is what yankSelection needs
+            getCursor().gotoRange(startPos, False)
+            getCursor().gotoRange(endPos, True)
+
+            FindMatchingPair = True
             Exit Function
         End If
     Next j
 
-    &apos; If backwardChar not found within 2000 steps
-    FindInsideMatchingPair = &quot;&quot;
+    FindMatchingPair = False
 End Function
 Sub initVibreoffice
     dim oTextCursor
