@@ -75,7 +75,7 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
-    setRawStatus(MODE &amp; &quot; | &quot; &amp; statusText &amp; &quot; | special: &quot; &amp; getSpecial() &amp; &quot; | &quot; &amp; &quot;modifier: &quot; &amp; getMovementModifier())
+    setRawStatus(MODE &amp; &quot; | Page: &quot; &amp; getPageNum() &amp; &quot;/&quot; &amp; getTotalPages() &amp; &quot; |  &quot; &amp;  &quot; | Word Count: &quot;  getWordcount() &amp; &quot; |  &quot;  &amp; statusText &amp; &quot; | special: &quot; &amp; getSpecial() &amp; &quot; | &quot; &amp; &quot;modifier: &quot; &amp; getMovementModifier())
 End Sub
 
 Sub setMode(modeName)
@@ -171,6 +171,17 @@ Function getSpecial()
     getSpecial = SPECIAL_MODE
 End Function
 
+Function getPageNum()
+    getPageNum = getCursor().getPage()
+End Function
+
+Function getTotalPages()
+    getTotalPages = thisComponent.CurrentController.PageCount
+End Function
+Function getWordcount()
+    getWordcount = thisComponent.DocumentProperties.DocumentStatistics( _
+        com.sun.star.document.DocumentStatistic.WORD_COUNT)
+End Function
 Sub delaySpecialReset()
     SPECIAL_COUNT = SPECIAL_COUNT + 1
 End Sub
@@ -428,9 +439,9 @@ Function ProcessNumberKey(oEvent)
     dim key as Integer
     key = oEvent.KeyChar
 
-    &apos; 48=&apos;0&apos; through 57=&apos;9&apos;
-    If key &gt;= 48 and key &lt;= 57 Then
-        addToMultiplier(key - 48)
+    &apos; 49=&apos;1&apos; through 57=&apos;9&apos;
+    If key &gt;= 49 and key &lt;= 57 Then
+        addToMultiplier(key - 49)
         ProcessNumberKey = True
     Else
         ProcessNumberKey = False
@@ -563,6 +574,36 @@ Function ProcessNormalKey(keyChar, modifiers)
         Exit Function
     End If
 
+    &apos;---------------------------------------------------
+    &apos;               Find and Replace
+    &apos;--------------==-----------------------------------
+    If keyChar = 47 Then &apos; 47 = /
+        Dim frameFind as Object
+        Dim dispatcherFind as Object
+        
+        frameFind = thisComponent.CurrentController.Frame
+        dispatcherFind = createUnoService(&quot;com.sun.star.frame.DispatchHelper&quot;)
+        
+        &apos; Uses the specific findbar protocol to focus the search bar
+        dispatcherFind.executeDispatch(frameFind, &quot;vnd.sun.star.findbar:FocusToFindbar&quot;, &quot;&quot;, 0, Array())
+        
+        ProcessNormalKey = True
+        Exit Function
+    End If
+
+    If keyChar = 92 Then &apos; 92 = \
+        Dim frame as Object
+        Dim dispatcher as Object
+        
+        frame = thisComponent.CurrentController.Frame
+        dispatcher = createUnoService(&quot;com.sun.star.frame.DispatchHelper&quot;)
+        
+        &apos; Launches the built-in Find &amp; Replace dialog
+        dispatcher.executeDispatch(frame, &quot;.uno:SearchDialog&quot;, &quot;&quot;, 0, Array())
+        
+        ProcessNormalKey = True
+        Exit Function
+    End If
 
     &apos; --------------------
     &apos; 4. Check Special/Delete Key
@@ -993,7 +1034,28 @@ Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
         oTextCursor.gotoNextWord(bExpand)
     ElseIf keyChar = 98 Or keyChar = 66 Then  &apos; 98=&apos;b&apos;, 66=&apos;B&apos;
         oTextCursor.gotoPreviousWord(bExpand)
+    ElseIf keyChar = 103 Then &apos; 103=&apos;g&apos;
+        If getSpecial() = &quot;g&quot; Then 
+            &apos; Handle &apos;gg&apos; (goto start of document)
+            getCursor().gotoStart(bExpand)
+            bSetCursor = False
+            resetSpecial(True)
+        Else
+            &apos; Set special &apos;g&apos; and wait for the next key
+            setSpecial(&quot;g&quot;)
+            bMatched = True
+            bSetCursor = False
+        End If
+
+    ElseIf keyChar = 71 Then &apos; 71=&apos;G&apos;
+        oTextCursor.gotoEnd(bExpand)
+
+    ElseIf keyChar = 48 Then &apos; &apos;0&apos; (Zero) - Absolute start of line
+        getCursor().gotoStartOfLine(bExpand)
+        bSetCursor = False
+
     ElseIf keyChar = 101 Then                  &apos; 101=&apos;e&apos;
+        oTextCursor.goRight(1, bExpand)
         oTextCursor.gotoEndOfWord(bExpand)
 
     ElseIf keyChar = 41 Then &apos; 41=&apos;)&apos;

@@ -27,7 +27,7 @@ This will simply build the extension file from the template files in
 
 vimbrewriter currently supports:
 - Insert (`i`, `I`, `a`, `A`, `o`, `O`), Visual (`v`), Normal modes
-- Movement keys: `hjkl`, `w`, `W`, `b`, `B`, `e`, `$`, `^`, `{}`, `()`, `C-d`, `C-u`
+- Movement keys: `hjkl`, `w`, `W`, `b`, `B`, `e`, `$`, `^`, `{}`, `()`, `C-d`, `C-u`, `gg`, `G`, `0`
     - Search movement: `f`, `F`, `t`, `T`
 - Number modifiers: e.g. `5w`, `4fa`
 - Replace: `r`
