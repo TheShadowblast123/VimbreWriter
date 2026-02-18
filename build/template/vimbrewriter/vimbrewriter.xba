@@ -437,8 +437,8 @@ Function ProcessNumberKey(oEvent)
     key = oEvent.KeyChar
 
     &apos; 48=&apos;0&apos; through 57=&apos;9&apos;
-    If key &gt;= 49 and key &lt;= 57 Then
-        addToMultiplier(key - 49)
+    If key &gt;= 48 and key &lt;= 57 Then
+        addToMultiplier(key - 48)
         ProcessNumberKey = True
     Else
         ProcessNumberKey = False
@@ -1032,18 +1032,52 @@ Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
         oTextCursor.gotoNextWord(bExpand)
     ElseIf keyChar = 98 Or keyChar = 66 Then  &apos; 98=&apos;b&apos;, 66=&apos;B&apos;
         oTextCursor.gotoPreviousWord(bExpand)
-    ElseIf keyChar = 103 Then &apos; 103=&apos;g&apos;
-        If getSpecial() = &quot;g&quot; Then 
-            &apos; Handle &apos;gg&apos; (goto start of document)
-            getCursor().gotoStart(bExpand)
-            bSetCursor = False
+
+
+    ElseIf keyChar = 103 Then &apos; 103 = &apos;g&apos;
+        If getSpecial() = &quot;g&quot; Then &apos; This is the second &apos;g&apos; in &apos;gg&apos;
+            Dim iMult As Integer
+            Dim nTotalPages As Long
+            
+            iMult = getMultiplier()
+            
+            &apos; If a multiplier was provided (e.g., 23gg)
+            &apos; Note: getMultiplier() returns 1 if no number was typed.
+            &apos; In Vim, gg goes to line 1, so here 1gg or gg goes to Page 1.
+            If MULTIPLIER &gt; 0 Then 
+                nTotalPages = thisComponent.CurrentController.PageCount
+                
+                Dim targetPage As Integer
+                If iMult &gt; nTotalPages Then
+                    targetPage = nTotalPages &apos; Jump to last page if count is less
+                Else
+                    targetPage = iMult
+                End If
+                
+                &apos; 1. Move the visual cursor to the target page
+                getCursor().jumpToPage(targetPage)
+                
+                &apos; 2. Sync the text cursor to that position
+                &apos; bExpand ensures this works correctly with Visual Mode
+                oTextCursor.gotoRange(getCursor().getStart(), bExpand)
+                
+                &apos; Reset multiplier since we&apos;ve consumed it
+                resetMultiplier()
+            Else
+                &apos; Standard &apos;gg&apos; (no number typed) -&gt; Jump to start of document
+                oTextCursor.gotoStart(bExpand)
+            End If
+            
+            bSetCursor = False &apos; We moved the cursor manually, no need for the default setter
             resetSpecial(True)
         Else
-            &apos; Set special &apos;g&apos; and wait for the next key
+            &apos; First &apos;g&apos; pressed: set the special state and wait for the next key
             setSpecial(&quot;g&quot;)
             bMatched = True
             bSetCursor = False
         End If
+
+
 
     ElseIf keyChar = 71 Then &apos; 71=&apos;G&apos;
         oTextCursor.gotoEnd(bExpand)
