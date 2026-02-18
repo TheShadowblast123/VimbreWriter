@@ -72,7 +72,7 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
-    setRawStatus(MODE & " | Page: " & getPageNum() & "/" & getTotalPages() & " | " & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier())
+    setRawStatus(MODE & " | Page: " & getPageNum() & "/" & getTotalPages() & " |  " &  " | Word Count: "  getWordcount() & " |  "  & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier())
 End Sub
 
 Sub setMode(modeName)
@@ -175,7 +175,10 @@ End Function
 Function getTotalPages()
     getTotalPages = thisComponent.CurrentController.PageCount
 End Function
-
+Function getWordcount()
+    getWordcount = thisComponent.DocumentProperties.DocumentStatistics( _
+        com.sun.star.document.DocumentStatistic.WORD_COUNT)
+End Function
 Sub delaySpecialReset()
     SPECIAL_COUNT = SPECIAL_COUNT + 1
 End Sub
@@ -433,7 +436,7 @@ Function ProcessNumberKey(oEvent)
     dim key as Integer
     key = oEvent.KeyChar
 
-    ' 48='0' through 57='9'
+    ' 49='1' through 57='9'
     If key >= 49 and key <= 57 Then
         addToMultiplier(key - 49)
         ProcessNumberKey = True
@@ -571,7 +574,7 @@ Function ProcessNormalKey(keyChar, modifiers)
     '---------------------------------------------------
     '               Find and Replace
     '--------------==-----------------------------------
-    If keyChar = 47 Then 
+    If keyChar = 47 Then ' 47 = /
         Dim frameFind as Object
         Dim dispatcherFind as Object
         
@@ -585,8 +588,7 @@ Function ProcessNormalKey(keyChar, modifiers)
         Exit Function
     End If
 
-    ' 92 is the key code for '\'
-    If keyChar = 92 Then 
+    If keyChar = 92 Then ' 92 = \
         Dim frame as Object
         Dim dispatcher as Object
         
