@@ -991,6 +991,7 @@ Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
     ElseIf keyChar = 98 Or keyChar = 66 Then  ' 98='b', 66='B'
         oTextCursor.gotoPreviousWord(bExpand)
     ElseIf keyChar = 101 Then                  ' 101='e'
+        oTextCursor.goRight(1, bExpand)
         oTextCursor.gotoEndOfWord(bExpand)
 
     ElseIf keyChar = 41 Then ' 41=')'
