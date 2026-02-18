@@ -72,7 +72,7 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
-    setRawStatus(MODE & " | " & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier() & " | Page: " & getPageNum() & "/" & getTotalPages())
+    setRawStatus(MODE & " | " & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier() & " | Page: " & getPageNum() & "/" & getPageCount())
 End Sub
 
 Sub setMode(modeName)
@@ -172,8 +172,8 @@ Function getPageNum()
     getPageNum = getCursor().getPage()
 End Function
 
-Function getTotalPages()
-    getTotalPages = thisComponent.CurrentController.PageCount
+Function getPageCount()
+    getPageCount = thisComponent.CurrentController.PageCount
 End Function
 
 Sub delaySpecialReset()
