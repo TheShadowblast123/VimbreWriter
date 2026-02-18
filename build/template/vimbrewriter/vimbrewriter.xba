@@ -948,31 +948,28 @@ End Function
 &apos; -----------------------
 &apos;   Default: bExpand = False, keyModifiers = 0
 &apos;   keyChar is an ASCII integer (e.g. 104 for &apos;h&apos;)
-Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
+Function ProcessMovementKey(keyChar, Optional bExpand)
     dim oTextCursor, bSetCursor, bMatched
     oTextCursor = getTextCursor()
     bMatched = True
     If IsMissing(bExpand) Then bExpand = False
-    If IsMissing(keyModifiers) Then keyModifiers = 0
 
-
-    &apos; Check for modified keys (Ctrl, Alt, not Shift)
-    If keyModifiers &gt; 1 Then
-        dim bIsControl
-        bIsControl = (keyModifiers = 2) or (keyModifiers = 8)
-
-        &apos; Ctrl+d (100) and Ctrl+u (117)
-        If bIsControl and keyChar = 100 Then &apos; 100=&apos;d&apos;
+        &apos; Ctrl+d (4) and Ctrl+u (21)
+        If keyChar = 4 Then &apos; 4=&apos;d&apos;
             getCursor().ScreenDown(bExpand)
-        ElseIf bIsControl and keyChar = 117 Then &apos; 117=&apos;u&apos;
+            ProcessMovementKey = True
+            Exit Function
+        ElseIf keyChar = 21 Then &apos; 21=&apos;u&apos;
             getCursor().ScreenUp(bExpand)
+            ProcessMovementKey = True
+            Exit Function
         Else
             bMatched = False
         End If
 
         ProcessMovementKey = bMatched
-        Exit Function
-    End If
+  
+
 
     &apos; Set global cursor to oTextCursor&apos;s new position if moved
     bSetCursor = True
