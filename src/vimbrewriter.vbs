@@ -73,6 +73,7 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
+<<<<<<< HEAD
 setRawStatus( _
     MODE & _
     " | Page: " & getPageNum() & "/" & getTotalPages() & _
@@ -81,6 +82,9 @@ setRawStatus( _
     " | special: " & getSpecial() & _
     " | modifier: " & getMovementModifier() _
 )
+=======
+    setRawStatus(MODE & " | Page: " & getPageNum() & "/" & getTotalPages() & " |  " &  " | Word Count: "  getWordcount() & " |  "  & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier())
+>>>>>>> 817d62f4a0b8121d0aadd7aec8a9cd04382662a3
 End Sub
 
 Sub setMode(modeName)

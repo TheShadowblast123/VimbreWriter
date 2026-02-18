@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
 <script:module xmlns:script="http://openoffice.org/2000/script" script:name="vimbrewriter" script:language="StarBasic">
+
 &apos; vibreoffice - Vi Mode for LibreOffice/OpenOffice
 &apos;
 &apos; The MIT License (MIT)
@@ -75,7 +76,18 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
+&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+setRawStatus( _
+    MODE &amp; _
+    &quot; | Page: &quot; &amp; getPageNum() &amp; &quot;/&quot; &amp; getTotalPages() &amp; _
+    &quot; | Word Count: &quot; &amp; getWordcount() &amp; _
+    &quot; | &quot; &amp; statusText &amp; _
+    &quot; | special: &quot; &amp; getSpecial() &amp; _
+    &quot; | modifier: &quot; &amp; getMovementModifier() _
+)
+=======
     setRawStatus(MODE &amp; &quot; | Page: &quot; &amp; getPageNum() &amp; &quot;/&quot; &amp; getTotalPages() &amp; &quot; |  &quot; &amp;  &quot; | Word Count: &quot;  getWordcount() &amp; &quot; |  &quot;  &amp; statusText &amp; &quot; | special: &quot; &amp; getSpecial() &amp; &quot; | &quot; &amp; &quot;modifier: &quot; &amp; getMovementModifier())
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; 817d62f4a0b8121d0aadd7aec8a9cd04382662a3
 End Sub
 
 Sub setMode(modeName)

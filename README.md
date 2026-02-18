@@ -8,7 +8,7 @@ your favorite key bindings from vi/vim to your favorite office suite, with a hea
 ### Installation/Usage
 
 The easiest way to install is to download the
-[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.0.oxt)
+[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.1.oxt)
 and open it with LibreOffice/OpenOffice.
 
 To enable/disable vimbrewriter, simply select Tools -> Add-Ons -> vimbrewriter.
@@ -27,7 +27,11 @@ This will simply build the extension file from the template files in
 
 vimbrewriter currently supports:
 - Insert (`i`, `I`, `a`, `A`, `o`, `O`), Visual (`v`), Normal modes
+<<<<<<< HEAD
 - Movement keys: `hjkl`, `w`, `W`, `b`, `B`, `e`, `$`, `^`, `{}`, `()`, `C-d`, `C-u`, `gg`, `G`, `0`
+=======
+- Movement keys: `hjkl`, `w`, `W`, `b`, `B`, `e`, `$`, `^`, `{}`, `()`, `C-d`, `C-u`, `g`, `G`, `0`
+>>>>>>> 817d62f4a0b8121d0aadd7aec8a9cd04382662a3
     - Search movement: `f`, `F`, `t`, `T`
 - Number modifiers: e.g. `5w`, `4fa`
 - Replace: `r`
@@ -64,6 +68,8 @@ vimbrewriter currently supports:
         - It is best to create an issue first, or explain what the code is doing
     - profit   
 
+we can give life to this project together
+<img width="993" height="512" alt="image" src="https://github.com/user-attachments/assets/428fdc57-00c3-49f7-b7d0-a4165fdc8e0b" />
 
 ### License
 vimbrewriter is released under the MIT License.
