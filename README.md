@@ -5,9 +5,6 @@
 VimbreWriter is an extension for Libreoffice and OpenOffice that brings some of
 your favorite key bindings from vi/vim to your favorite office suite, with a heavy focus on librewriter.
 
-Most of the rest of this readme is just going to be the original readme until I actually know what I'm doing.
-The project is now in a working state with the most up to date version of libre office
-
 ### Installation/Usage
 
 The easiest way to install is to download the
