@@ -72,7 +72,7 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
-    setRawStatus(MODE & " | " & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier())
+    setRawStatus(MODE & " | Page: " & getPageNum() & "/" & getTotalPages() & " | " & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier())
 End Sub
 
 Sub setMode(modeName)
@@ -166,6 +166,14 @@ End Sub
 
 Function getSpecial()
     getSpecial = SPECIAL_MODE
+End Function
+
+Function getPageNum()
+    getPageNum = getCursor().getPage()
+End Function
+
+Function getTotalPages()
+    getTotalPages = thisComponent.CurrentController.PageCount
 End Function
 
 Sub delaySpecialReset()
@@ -426,8 +434,8 @@ Function ProcessNumberKey(oEvent)
     key = oEvent.KeyChar
 
     ' 48='0' through 57='9'
-    If key >= 48 and key <= 57 Then
-        addToMultiplier(key - 48)
+    If key >= 49 and key <= 57 Then
+        addToMultiplier(key - 49)
         ProcessNumberKey = True
     Else
         ProcessNumberKey = False
@@ -560,6 +568,37 @@ Function ProcessNormalKey(keyChar, modifiers)
         Exit Function
     End If
 
+    '---------------------------------------------------
+    '               Find and Replace
+    '--------------==-----------------------------------
+    If keyChar = 47 Then 
+        Dim frameFind as Object
+        Dim dispatcherFind as Object
+        
+        frameFind = thisComponent.CurrentController.Frame
+        dispatcherFind = createUnoService("com.sun.star.frame.DispatchHelper")
+        
+        ' Uses the specific findbar protocol to focus the search bar
+        dispatcherFind.executeDispatch(frameFind, "vnd.sun.star.findbar:FocusToFindbar", "", 0, Array())
+        
+        ProcessNormalKey = True
+        Exit Function
+    End If
+
+    ' 92 is the key code for '\'
+    If keyChar = 92 Then 
+        Dim frame as Object
+        Dim dispatcher as Object
+        
+        frame = thisComponent.CurrentController.Frame
+        dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+        
+        ' Launches the built-in Find & Replace dialog
+        dispatcher.executeDispatch(frame, ".uno:SearchDialog", "", 0, Array())
+        
+        ProcessNormalKey = True
+        Exit Function
+    End If
 
     ' --------------------
     ' 4. Check Special/Delete Key
@@ -990,7 +1029,28 @@ Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
         oTextCursor.gotoNextWord(bExpand)
     ElseIf keyChar = 98 Or keyChar = 66 Then  ' 98='b', 66='B'
         oTextCursor.gotoPreviousWord(bExpand)
+    ElseIf keyChar = 103 Then ' 103='g'
+        If getSpecial() = "g" Then 
+            ' Handle 'gg' (goto start of document)
+            getCursor().gotoStart(bExpand)
+            bSetCursor = False
+            resetSpecial(True)
+        Else
+            ' Set special 'g' and wait for the next key
+            setSpecial("g")
+            bMatched = True
+            bSetCursor = False
+        End If
+
+    ElseIf keyChar = 71 Then ' 71='G'
+        oTextCursor.gotoEnd(bExpand)
+
+    ElseIf keyChar = 48 Then ' '0' (Zero) - Absolute start of line
+        getCursor().gotoStartOfLine(bExpand)
+        bSetCursor = False
+
     ElseIf keyChar = 101 Then                  ' 101='e'
+        oTextCursor.goRight(1, bExpand)
         oTextCursor.gotoEndOfWord(bExpand)
 
     ElseIf keyChar = 41 Then ' 41=')'
