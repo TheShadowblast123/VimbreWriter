@@ -8,7 +8,7 @@ your favorite key bindings from vi/vim to your favorite office suite, with a hea
 ### Installation/Usage
 
 The easiest way to install is to download the
-[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.0.oxt)
+[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.1.oxt)
 and open it with LibreOffice/OpenOffice.
 
 To enable/disable vimbrewriter, simply select Tools -> Add-Ons -> vimbrewriter.
@@ -27,7 +27,7 @@ This will simply build the extension file from the template files in
 
 vimbrewriter currently supports:
 - Insert (`i`, `I`, `a`, `A`, `o`, `O`), Visual (`v`), Normal modes
-- Movement keys: `hjkl`, `w`, `W`, `b`, `B`, `e`, `$`, `^`, `{}`, `()`, `C-d`, `C-u`
+- Movement keys: `hjkl`, `w`, `W`, `b`, `B`, `e`, `$`, `^`, `{}`, `()`, `C-d`, `C-u`, `g`, `G`, `0`
     - Search movement: `f`, `F`, `t`, `T`
 - Number modifiers: e.g. `5w`, `4fa`
 - Replace: `r`
