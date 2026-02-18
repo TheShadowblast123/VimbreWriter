@@ -568,6 +568,37 @@ Function ProcessNormalKey(keyChar, modifiers)
         Exit Function
     End If
 
+    '---------------------------------------------------
+    '               Find and Replace
+    '--------------==-----------------------------------
+    If keyChar = 47 Then 
+        Dim frameFind as Object
+        Dim dispatcherFind as Object
+        
+        frameFind = thisComponent.CurrentController.Frame
+        dispatcherFind = createUnoService("com.sun.star.frame.DispatchHelper")
+        
+        ' Uses the specific findbar protocol to focus the search bar
+        dispatcherFind.executeDispatch(frameFind, "vnd.sun.star.findbar:FocusToFindbar", "", 0, Array())
+        
+        ProcessNormalKey = True
+        Exit Function
+    End If
+
+    ' 92 is the key code for '\'
+    If keyChar = 92 Then 
+        Dim frame as Object
+        Dim dispatcher as Object
+        
+        frame = thisComponent.CurrentController.Frame
+        dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+        
+        ' Launches the built-in Find & Replace dialog
+        dispatcher.executeDispatch(frame, ".uno:SearchDialog", "", 0, Array())
+        
+        ProcessNormalKey = True
+        Exit Function
+    End If
 
     ' --------------------
     ' 4. Check Special/Delete Key
