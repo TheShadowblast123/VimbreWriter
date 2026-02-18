@@ -64,6 +64,8 @@ vimbrewriter currently supports:
         - It is best to create an issue first, or explain what the code is doing
     - profit   
 
+we can give life to this project together
+<img width="993" height="512" alt="image" src="https://github.com/user-attachments/assets/428fdc57-00c3-49f7-b7d0-a4165fdc8e0b" />
 
 ### License
 vimbrewriter is released under the MIT License.
