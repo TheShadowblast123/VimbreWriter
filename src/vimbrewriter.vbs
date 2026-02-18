@@ -990,6 +990,22 @@ Function ProcessMovementKey(keyChar, Optional bExpand, Optional keyModifiers)
         oTextCursor.gotoNextWord(bExpand)
     ElseIf keyChar = 98 Or keyChar = 66 Then  ' 98='b', 66='B'
         oTextCursor.gotoPreviousWord(bExpand)
+    ElseIf keyChar = 103 Then ' 103='g'
+        If getSpecial() = "g" Then 
+            ' Handle 'gg' (goto start of document)
+            getCursor().gotoStart(bExpand)
+            bSetCursor = False
+            resetSpecial(True)
+        Else
+            ' Set special 'g' and wait for the next key
+            setSpecial("g")
+            bMatched = True
+            bSetCursor = False
+        End If
+
+    ElseIf keyChar = 71 Then ' 71='G'
+        oTextCursor.gotoEnd(bExpand)
+
     ElseIf keyChar = 101 Then                  ' 101='e'
         oTextCursor.goRight(1, bExpand)
         oTextCursor.gotoEndOfWord(bExpand)
