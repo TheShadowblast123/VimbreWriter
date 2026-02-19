@@ -476,7 +476,6 @@ Function ProcessStandardMovementKey(oEvent)
 			bMatched = False
     End Select
 
-
     ProcessStandardMovementKey = bMatched
 End Function
 
@@ -487,9 +486,12 @@ Function ProcessNumberKey(oEvent)
 
     &apos; 49=&apos;1&apos; through 57=&apos;9&apos;
     If key &gt;= 49 and key &lt;= 57 Then
-        addToMultiplier(key - 49)
+        addToMultiplier(key - 48)
         ProcessNumberKey = True
-    Else
+    ElseIf key = 48 and getRawMultiplier &lt;&gt; 0 Then
+		addToMultiplier(0)
+		ProcessNumberKey = True
+	Else
         ProcessNumberKey = False
     End If
 End Function
@@ -514,9 +516,8 @@ Function ProcessModeKey(oEvent)
         &apos; 105=&apos;i&apos;, 97=&apos;a&apos;, 73=&apos;I&apos;, 65=&apos;A&apos;, 111=&apos;o&apos;, 79=&apos;O&apos;
         Case 105, 97, 73, 65, 111, 79:
             If key = 97  Then getCursor().goRight(1, False) &apos; &apos;a&apos;: move right before insert
-            If key = 73  Then ProcessMovementKey(94)        &apos; &apos;I&apos;: go to start of line
-            If key = 65  Then ProcessMovementKey(36)        &apos; &apos;A&apos;: go to end of line
-
+            If key = 73  Then ProcessMovementKey(123)        &apos; &apos;I&apos;: go to start of Paragraph
+            If key = 65  Then ProcessMovementKey(125)        &apos; &apos;A&apos;: go to end of Paragraph
             If key = 111 Then &apos; &apos;o&apos;: open line below
                 ProcessMovementKey(36)  &apos; &apos;$&apos;
                 ProcessMovementKey(108) &apos; &apos;l&apos;
@@ -1050,87 +1051,89 @@ Function ProcessMovementKey(keyChar, Optional bExpand)
         If Not bMatched Then
             bSetCursor = False
         End If
-    &apos; ---------------------------------
-
-    ElseIf keyChar = 108 Then &apos; 108=&apos;l&apos;
-        oTextCursor.goRight(1, bExpand)
-
-    ElseIf keyChar = 104 Then &apos; 104=&apos;h&apos;
-        oTextCursor.goLeft(1, bExpand)
-
-    &apos; oTextCursor.goUp and oTextCursor.goDown SHOULD work, but doesn&apos;t (I dont know why).
-    &apos; So this is a weird hack
-    ElseIf keyChar = 107 Then &apos; 107=&apos;k&apos;
-        getCursor().goUp(1, bExpand)
-        bSetCursor = False
-
-    ElseIf keyChar = 106 Then &apos; 106=&apos;j&apos;
-        getCursor().goDown(1, bExpand)
-        bSetCursor = False
-    &apos; ----------
-
-    ElseIf keyChar = 94 Then &apos; 94=&apos;^&apos;
-        getCursor().gotoStartOfLine(bExpand)
-        bSetCursor = False
-
-    ElseIf keyChar = 36 Then &apos; 36=&apos;$&apos;
-        dim oldPos, newPos
-        oldPos = getCursor().getPosition()
-        getCursor().gotoEndOfLine(bExpand)
-        newPos = getCursor().getPosition()
-
-        &apos; If the result is at the start of the line, then it must have
-        &apos; jumped down a line; goLeft to return to the previous line.
-        &apos;   Except for: Empty lines (check for oldPos = newPos)
-        If getCursor().isAtStartOfLine() And oldPos.Y() &lt;&gt; newPos.Y() Then
-            getCursor().goLeft(1, bExpand)
-        End If
-
-        bSetCursor = False
-
-    ElseIf keyChar = 119 Or keyChar = 87 Then &apos; 119=&apos;w&apos;, 87=&apos;W&apos;
-        oTextCursor.gotoNextWord(bExpand)
-    ElseIf keyChar = 98 Or keyChar = 66 Then  &apos; 98=&apos;b&apos;, 66=&apos;B&apos;
-	oTextCursor.gotoPreviousWord(bExpand)
-	ElseIf keyChar = 103 Then &apos; 103=&apos;g&apos;
-	If getSpecial() = &quot;g&quot; Then 
-		&apos; Handle &apos;gg&apos; (goto start of document)
-		getCursor().gotoStart(bExpand)
-		bSetCursor = False
-		resetSpecial(True)
-	Else
-		&apos; Set special &apos;g&apos; and wait for the next key
-		setSpecial(&quot;g&quot;)
-		bMatched = True
-		bSetCursor = False
-	End If
-
-	ElseIf keyChar = 71 Then &apos; 71=&apos;G&apos;
-	oTextCursor.gotoEnd(bExpand)
-
-	ElseIf keyChar = 48 Then &apos; &apos;0&apos; (Zero) - Absolute start of line
-	getCursor().gotoStartOfLine(bExpand)
-	bSetCursor = False
-
-
-    ElseIf keyChar = 101 Then                  &apos; 101=&apos;e&apos;
-		oTextCursor.goRight(1, bExpand)
-        oTextCursor.gotoEndOfWord(bExpand)
-
-    ElseIf keyChar = 41 Then &apos; 41=&apos;)&apos;
-        oTextCursor.gotoNextSentence(bExpand)
-    ElseIf keyChar = 40 Then &apos; 40=&apos;(&apos;
-        oTextCursor.gotoPreviousSentence(bExpand)
-    ElseIf keyChar = 125 Then &apos; 125=&apos;}&apos;
-        oTextCursor.gotoNextParagraph(bExpand)
-    ElseIf keyChar = 123 Then &apos; 123=&apos;{&apos;
-        oTextCursor.gotoPreviousParagraph(bExpand)
-
-    Else
-        bSetCursor = False
-        bMatched = False
     End If
+    &apos; ---------------------------------
+	Select Case keyChar
+		
+		Case 108  &apos; 108=&apos;l&apos;
+			oTextCursor.goRight(1, bExpand)
 
+		Case 104  &apos; 104=&apos;h&apos;
+			oTextCursor.goLeft(1, bExpand)
+
+		Case 107  &apos; 107=&apos;k&apos;
+			getCursor().goUp(1, bExpand)
+			bSetCursor = False
+
+		Case 106  &apos; 106=&apos;j&apos;
+			getCursor().goDown(1, bExpand)
+			bSetCursor = False
+		&apos; ----------
+
+		Case 94  &apos; 94=&apos;^&apos;
+			getCursor().gotoStartOfLine(bExpand)
+			bSetCursor = False
+
+		Case 36  &apos; 36=&apos;$&apos;
+			dim oldPos, newPos
+			oldPos = getCursor().getPosition()
+			getCursor().gotoEndOfLine(bExpand)
+			newPos = getCursor().getPosition()
+
+			&apos; If the result is at the start of the line, then it must have
+			&apos; jumped down a line; goLeft to return to the previous line.
+			&apos;   Except for: Empty lines (check for oldPos = newPos)
+			If getCursor().isAtStartOfLine() And oldPos.Y() &lt;&gt; newPos.Y() Then
+				getCursor().goLeft(1, bExpand)
+			End If
+
+			bSetCursor = False
+
+		Case 119, 87  &apos; 119=&apos;w&apos;, 87=&apos;W&apos;
+			oTextCursor.gotoNextWord(bExpand)
+		Case 98, 66   &apos; 98=&apos;b&apos;, 66=&apos;B&apos;
+			oTextCursor.gotoPreviousWord(bExpand)
+		Case 103  &apos; 103=&apos;g&apos;
+			If getSpecial() = &quot;g&quot; Then 
+				&apos; Handle &apos;gg&apos; (goto start of document)
+				getCursor().gotoStart(bExpand)
+				bSetCursor = False
+				resetSpecial(True)
+			Else
+				&apos; Set special &apos;g&apos; and wait for the next key
+				setSpecial(&quot;g&quot;)
+				bMatched = True
+				bSetCursor = False
+			End If
+		Case 71  &apos; 71=&apos;G&apos;
+			oTextCursor.gotoEnd(bExpand)
+		Case 48  &apos; &apos;0&apos; (Zero) - Absolute start of line
+			getCursor().gotoStartOfLine(bExpand)
+			bSetCursor = False
+
+		Case 101                   &apos; 101=&apos;e&apos;
+			oTextCursor.goRight(1, bExpand)
+			oTextCursor.gotoEndOfWord(bExpand)
+
+		Case 41  &apos; 41=&apos;)&apos;
+			oTextCursor.gotoNextSentence(bExpand) 
+			oTextCursor.goLeft(1, bExpand)
+		Case 40  &apos; 40=&apos;(&apos;
+			oTextCursor.gotoPreviousSentence(bExpand) 
+			oTextCursor.goLeft(1, bExpand)
+		Case 125  &apos; 125=&apos;}&apos;
+			oTextCursor.gotoNextParagraph(bExpand)
+			oTextCursor.goLeft(1, bExpand)
+		Case 123  &apos; 123=&apos;{&apos;
+			oTextCursor.gotoPreviousParagraph(bExpand)
+			oTextCursor.goRight(1, bExpand)
+		Case Else
+			bSetCursor = False
+			bMatched = False
+		End Select
+			ProcessMovementKey(104, True) &apos; 104=&apos;h&apos;
+		Case 1027 &apos; Right arrow
+			ProcessMovementKey(108, True) &apos; 108=&apos;l&apos;
     &apos; If oTextCursor was moved, set global cursor to its position
     If bSetCursor Then
         getCursor().gotoRange(oTextCursor.getStart(), False)

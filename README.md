@@ -8,7 +8,7 @@ your favorite key bindings from vi/vim to your favorite office suite, with a hea
 ### Installation/Usage
 
 The easiest way to install is to download the
-[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.23.oxt)
+[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.24.oxt)
 and open it with LibreOffice/OpenOffice.
 
 To enable/disable vimbrewriter, simply select Tools -> Add-Ons -> vimbrewriter.
@@ -53,7 +53,8 @@ vimbrewriter currently supports:
   that would otherwise leave you in the same position (such as `dd`) this has
   mostly been mitigated but a side effect is `dd` will not deleted entire
   paragraphs
-
+- `I` and `A` are paragraph based instead of line based. Most other line based motions will be kept,
+  but this behaves more like how vim would behave
 ### I found a bug/How do I help
 - If you find a bug or have a suggestion follow these simple steps:
     - check if there's a pre-existing issue
