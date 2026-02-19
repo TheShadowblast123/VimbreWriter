@@ -547,8 +547,8 @@ Function ProcessNormalKey(keyChar, modifiers)
     ' --------------------
     ' 2. Undo/Redo
     ' --------------------
-    ' 117='u', 114='r' (Ctrl+r = redo)
-    If keyChar = 117 Or (bIsControl And keyChar = 114) Then ' 'u' or Ctrl+'r'
+    ' 117='u', 18='r' (Ctrl+r = redo)
+    If keyChar = 117 Or keyChar = 18 Then ' 'u' or Ctrl+'r'
         For i = 1 To iIterations
             Undo(keyChar = 117) ' 117='u'
         Next i

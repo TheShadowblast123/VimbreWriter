@@ -550,8 +550,8 @@ Function ProcessNormalKey(keyChar, modifiers)
     &apos; --------------------
     &apos; 2. Undo/Redo
     &apos; --------------------
-    &apos; 117=&apos;u&apos;, 114=&apos;r&apos; (Ctrl+r = redo)
-    If keyChar = 117 Or (bIsControl And keyChar = 114) Then &apos; &apos;u&apos; or Ctrl+&apos;r&apos;
+    &apos; 117=&apos;u&apos;, 18=&apos;r&apos; (Ctrl+r = redo)
+    If keyChar = 117 Or keyChar = 18 Then &apos; &apos;u&apos; or Ctrl+&apos;r&apos;
         For i = 1 To iIterations
             Undo(keyChar = 117) &apos; 117=&apos;u&apos;
         Next i
