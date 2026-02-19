@@ -511,7 +511,7 @@ Function ProcessNormalKey(keyChar, modifiers)
     bIsControl = (modifiers = 2) or (modifiers = 8)
 
     bIsVisual = (MODE = &quot;VISUAL&quot;) &apos; is this hardcoding bad? what about visual block?
-    
+
     iMultiplier = getMultiplier()
     iRawMultiplier = getRawMultiplier()
 
@@ -932,10 +932,6 @@ Function ProcessSearchKey(oTextCursor, searchType, keyChar, bExpand)
 
 End Function
 
-
-
-
-
 &apos; -----------------------
 &apos; Main Movement Function
 &apos; -----------------------
@@ -1040,7 +1036,7 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
     ElseIf keyChar = 98 Or keyChar = 66 Then  &apos; 98=&apos;b&apos;, 66=&apos;B&apos;
         For i = 1 to iMultiplier : oTextCursor.gotoPreviousWord(bExpand) : Next i
     ElseIf keyChar = 103 Then &apos; 103=&apos;g&apos;
-        If iRawMultiplier &gt; 0 Then &apos; multiplier was explicitly provided
+        If iRawMultiplier &gt; 0 Then 
             Dim targetPage As Integer
             Dim itotalPages As Integer
 
@@ -1050,7 +1046,6 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
 
             getCursor().jumpToPage(targetPage, bExpand)
             oTextCursor.gotoRange(getCursor().getStart(), bExpand)
-
         ElseIf getSpecial() = &quot;g&quot; Then 
             &apos; Handle &apos;gg&apos; (goto start of document)
             getCursor().gotoStart(bExpand)

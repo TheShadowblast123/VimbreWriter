@@ -929,10 +929,6 @@ Function ProcessSearchKey(oTextCursor, searchType, keyChar, bExpand)
 
 End Function
 
-
-
-
-
 ' -----------------------
 ' Main Movement Function
 ' -----------------------
@@ -1037,7 +1033,17 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
     ElseIf keyChar = 98 Or keyChar = 66 Then  ' 98='b', 66='B'
         For i = 1 to iMultiplier : oTextCursor.gotoPreviousWord(bExpand) : Next i
     ElseIf keyChar = 103 Then ' 103='g'
-        If getSpecial() = "g" Then 
+        If iRawMultiplier > 0 Then 
+            Dim targetPage As Integer
+            Dim itotalPages As Integer
+
+            targetPage = iMultiplier
+            itotalPages = getPageCount()
+            If targetPage > itotalPages Then targetPage = itotalPages
+
+            getCursor().jumpToPage(targetPage, bExpand)
+            oTextCursor.gotoRange(getCursor().getStart(), bExpand)
+        ElseIf getSpecial() = "g" Then 
             ' Handle 'gg' (goto start of document)
             getCursor().gotoStart(bExpand)
             bSetCursor = False
