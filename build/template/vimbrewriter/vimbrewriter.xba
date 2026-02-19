@@ -2,6 +2,7 @@
 <!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
 <script:module xmlns:script="http://openoffice.org/2000/script" script:name="vimbrewriter" script:language="StarBasic">
 
+
 &apos; vibreoffice - Vi Mode for LibreOffice/OpenOffice
 &apos;
 &apos; The MIT License (MIT)
@@ -76,14 +77,15 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
-setRawStatus( _
-    MODE &amp; _
-    &quot; | Page: &quot; &amp; getPageNum() &amp; &quot;/&quot; &amp; getTotalPages() &amp; _
-    &quot; | Word Count: &quot; &amp; getWordcount() &amp; _
-    &quot; | &quot; &amp; statusText &amp; _
-    &quot; | special: &quot; &amp; getSpecial() &amp; _
-    &quot; | modifier: &quot; &amp; getMovementModifier() _
-)
+	setRawStatus( _
+		MODE &amp; _
+		&quot; | Page: &quot; &amp; getPageNum() &amp; &quot;/&quot; &amp; getTotalPages() &amp; _
+		&quot; | Word Count: &quot; &amp; getWordcount() &amp; _
+		&quot; | &quot; &amp; statusText &amp; _
+		&quot; | special: &quot; &amp; getSpecial() &amp; _
+		&quot; | modifier: &quot; &amp; getMovementModifier() _
+	)
+
 End Sub
 
 Sub setMode(modeName)
@@ -120,6 +122,19 @@ End Sub
 Function samePos(oPos1, oPos2)
     samePos = oPos1.X() = oPos2.X() And oPos1.Y() = oPos2.Y()
 End Function
+
+Function getPageNum()
+    getPageNum = getCursor().getPage()
+End Function
+
+Function getTotalPages()
+    getTotalPages = thisComponent.CurrentController.PageCount
+End Function
+Function getWordcount()
+    getWordcount = ThisComponent.DocumentProperties.DocumentStatistics(5).value
+
+End Function
+
 
 Function genString(sChar, iLen)
     dim sResult, i
@@ -179,17 +194,6 @@ Function getSpecial()
     getSpecial = SPECIAL_MODE
 End Function
 
-Function getPageNum()
-    getPageNum = getCursor().getPage()
-End Function
-
-Function getTotalPages()
-    getTotalPages = thisComponent.CurrentController.PageCount
-End Function
-Function getWordcount()
-    getWordcount = ThisComponent.DocumentProperties.DocumentStatistics(5).value
-        
-End Function
 Sub delaySpecialReset()
     SPECIAL_COUNT = SPECIAL_COUNT + 1
 End Sub
@@ -207,13 +211,28 @@ End Sub
 &apos; -----------------
 &apos; Movement Modifier
 &apos; -----------------
-&apos;f,i,a
+&apos;f,i,a,u (can be combined: &quot;iu&quot; or &quot;au&quot;)
 global MOVEMENT_MODIFIER As string
 
-
+&apos; For the &quot;u&quot; (until) modifier, we need to capture two symbols.
+&apos; This tracks which keypress we&apos;re on (0=none, 1=waiting for second symbol)
+global UNTIL_STATE As integer
+global UNTIL_FIRST_SYMBOL As integer  &apos; ASCII code of first symbol
 
 Sub setMovementModifier(modifierName)
-    MOVEMENT_MODIFIER = modifierName
+    &apos; Special case: if we&apos;re transitioning from &quot;i&quot; or &quot;a&quot; to &quot;u&quot;,
+    &apos; concatenate to preserve the i/a information (becomes &quot;iu&quot; or &quot;au&quot;)
+    If modifierName = &quot;u&quot; And (MOVEMENT_MODIFIER = &quot;i&quot; Or MOVEMENT_MODIFIER = &quot;a&quot;) Then
+        MOVEMENT_MODIFIER = MOVEMENT_MODIFIER &amp; &quot;u&quot;
+    Else
+        MOVEMENT_MODIFIER = modifierName
+    End If
+    
+    &apos; Reset &quot;until&quot; state when changing modifiers away from &quot;iu&quot;/&quot;au&quot;
+    If MOVEMENT_MODIFIER &lt;&gt; &quot;iu&quot; And MOVEMENT_MODIFIER &lt;&gt; &quot;au&quot; Then
+        UNTIL_STATE = 0
+        UNTIL_FIRST_SYMBOL = 0
+    End If
 End Sub
 
 Function getMovementModifier()
@@ -326,6 +345,18 @@ function KeyHandler_KeyPressed(oEvent) as boolean
     ElseIf ProcessNumberKey(oEvent) Then
         bIsMultiplier = True
         delaySpecialReset()
+    ElseIf (oEvent.KeyChar = 4 Or oEvent.KeyChar = 21) Then
+        &apos; Ctrl+d sends keyChar=4 (Ctrl+d), Ctrl+u sends keyChar=21 (Ctrl+u)
+        If oEvent.KeyChar = 4 Then &apos; Ctrl+d
+            getCursor().ScreenDown(False)
+        Else &apos; Ctrl+u
+            getCursor().ScreenUp(False)
+        End If
+        bConsumeInput = True
+    &apos; Movement modifier — MUST come before ProcessNormalKey when modifier is &quot;i&quot; or &quot;a&quot;
+    &apos; so that &quot;u&quot; can chain with them to form &quot;iu&quot; or &quot;au&quot; instead of being consumed as undo
+    ElseIf (getMovementModifier() = &quot;i&quot; Or getMovementModifier() = &quot;a&quot;) And ProcessMovementModifierKey(oEvent.KeyChar) Then
+        delaySpecialReset()
 
     &apos; Normal Key
     ElseIf ProcessNormalKey(oEvent.KeyChar, oEvent.Modifiers) Then
@@ -353,12 +384,15 @@ function KeyHandler_KeyPressed(oEvent) as boolean
         bConsumeInput = False
     End If
     &apos; --------------------------
-
+	
     &apos; Reset Special
-    resetSpecial()
+    &apos; BUT: Don&apos;t reset if we&apos;re waiting for the second symbol in &quot;iu&quot;/&quot;au&quot;
+    If UNTIL_STATE &lt;&gt; 1 Then
+        resetSpecial()
+    End If
 
     &apos; Reset multiplier if last input was not number and not in special mode
-    If not bIsMultiplier and getSpecial() = &quot;&quot; and getMovementModifier() = &quot;&quot; Then
+    If not bIsMultiplier and getSpecial() = &quot;&quot; and getMovementModifier() = &quot;&quot; and UNTIL_STATE = 0 Then
         resetMultiplier()
     End If
     setStatus(getMultiplier())
@@ -421,23 +455,27 @@ Function ProcessStandardMovementKey(oEvent)
     bMatched = True
 
     If MODE &lt;&gt; &quot;VISUAL&quot; Then
-        bMatched = False
-        &apos;Pass
-    ElseIf c = 1024 Then &apos; Down arrow
-        ProcessMovementKey(106, True) &apos; 106=&apos;j&apos;
-    ElseIf c = 1025 Then &apos; Up arrow
-        ProcessMovementKey(107, True) &apos; 107=&apos;k&apos;
-    ElseIf c = 1026 Then &apos; Left arrow
-        ProcessMovementKey(104, True) &apos; 104=&apos;h&apos;
-    ElseIf c = 1027 Then &apos; Right arrow
-        ProcessMovementKey(108, True) &apos; 108=&apos;l&apos;
-    ElseIf c = 1028 Then &apos; Home
-        ProcessMovementKey(94, True)  &apos; 94=&apos;^&apos;
-    ElseIf c = 1029 Then &apos; End
-        ProcessMovementKey(36, True)  &apos; 36=&apos;$&apos;
-    Else
-        bMatched = False
-    End If
+        ProcessStandardMovementKey = False
+        Exit Function
+	End If
+	Select Case c
+	
+		Case 1024 &apos; Down arrow
+			ProcessMovementKey(106, True) &apos; 106=&apos;j&apos;
+		Case 1025 &apos; Up arrow
+			ProcessMovementKey(107, True) &apos; 107=&apos;k&apos;
+		Case 1026 &apos; Left arrow
+			ProcessMovementKey(104, True) &apos; 104=&apos;h&apos;
+		Case 1027 &apos; Right arrow
+			ProcessMovementKey(108, True) &apos; 108=&apos;l&apos;
+		Case 1028 &apos; Home
+			ProcessMovementKey(94, True)  &apos; 94=&apos;^&apos;
+		Case 1029 &apos; End
+			ProcessMovementKey(36, True)  &apos; 36=&apos;$&apos;
+		Case Else
+			bMatched = False
+    End Select
+
 
     ProcessStandardMovementKey = bMatched
 End Function
@@ -510,8 +548,7 @@ End Function
 
 
 Function ProcessNormalKey(keyChar, modifiers)
-    dim i, bMatched, bIsVisual, iIterations, bIsControl
-    bIsControl = (modifiers = 2) or (modifiers = 8)
+    dim i, bMatched, bIsVisual, iIterations
 
     bIsVisual = (MODE = &quot;VISUAL&quot;) &apos; is this hardcoding bad? what about visual block?
 
@@ -534,13 +571,20 @@ Function ProcessNormalKey(keyChar, modifiers)
     Next i
 
     &apos; Reset Movement Modifier
-    setMovementModifier(&quot;&quot;)
+    &apos; EXCEPT: Don&apos;t reset if we&apos;re in the middle of an &quot;iu&quot;/&quot;au&quot; sequence
+    &apos; waiting for the second symbol (UNTIL_STATE = 1)
+    If UNTIL_STATE &lt;&gt; 1 Then
+        setMovementModifier(&quot;&quot;)
+    End If
 
     &apos; Exit already if movement key was matched
     If bMatched Then
         &apos; If Special: d/c : change mode
-        If getSpecial() = &quot;d&quot; Or getSpecial() = &quot;y&quot; Then gotoMode(&quot;NORMAL&quot;)
-        If getSpecial() = &quot;c&quot; Then gotoMode(&quot;INSERT&quot;)
+        &apos; BUT: Don&apos;t change mode if we&apos;re in the middle of &quot;iu&quot;/&quot;au&quot; waiting for symbol 2
+        If UNTIL_STATE &lt;&gt; 1 Then
+            If getSpecial() = &quot;d&quot; Or getSpecial() = &quot;y&quot; Then gotoMode(&quot;NORMAL&quot;)
+            If getSpecial() = &quot;c&quot; Then gotoMode(&quot;INSERT&quot;)
+        End If
 
         ProcessNormalKey = True
         Exit Function
@@ -550,8 +594,10 @@ Function ProcessNormalKey(keyChar, modifiers)
     &apos; --------------------
     &apos; 2. Undo/Redo
     &apos; --------------------
-    &apos; 117=&apos;u&apos;, 18=&apos;r&apos; (Ctrl+r = redo)
-    If keyChar = 117 Or keyChar = 18 Then &apos; &apos;u&apos; or Ctrl+&apos;r&apos;
+    &apos; 117=&apos;u&apos;, 114=&apos;r&apos; (Ctrl+r = redo)
+    &apos; IMPORTANT: Only treat &apos;u&apos; as undo if there&apos;s NO movement modifier active.
+    &apos; If getMovementModifier() is &quot;i&quot; or &quot;a&quot;, then &apos;u&apos; should become a modifier.
+    If getMovementModifier() = &quot;&quot; And (keyChar = 117 Or keyChar = 18) Then
         For i = 1 To iIterations
             Undo(keyChar = 117) &apos; 117=&apos;u&apos;
         Next i
@@ -658,41 +704,43 @@ ErrorHandler:
     Resume Next
 End Sub
 
+
 &apos; Get the current column position (character offset from start of line).
 &apos; Used by dd/cc to preserve horizontal position after deleting a line.
 Function GetCursorColumn() As Integer
-	dim oVC, oText, oSaved, oTest
-	
-	oVC = ThisComponent.CurrentController.getViewCursor()
-	oText = ThisComponent.Text
-	
-	&apos; Save exact current position
-	oSaved = oText.createTextCursorByRange(oVC.getStart())
-	
-	&apos; Work on a duplicate model cursor
-	oTest = oText.createTextCursorByRange(oSaved)
-	
-	&apos; Move duplicate to visual line start using a temporary ViewCursor
-	dim oTempVC
-	oTempVC = ThisComponent.CurrentController.getViewCursor()
-	oTempVC.gotoRange(oSaved.getStart(), False)
-	oTempVC.gotoStartOfLine(False)
-	
-	&apos; Now select from visual start to original position using model cursor
-	oTest.gotoRange(oTempVC, False)
-	oTest.gotoRange(oSaved, True)
-	
-	GetCursorColumn = Len(oTest.getString())
-	
-	&apos; Restore original cursor position explicitly
-	oVC.gotoRange(oSaved, False)
+	Dim oVC, oText, oSaved, oTest as Object
+
+    oVC = ThisComponent.CurrentController.getViewCursor()
+    oText = ThisComponent.Text
+
+    &apos; Save exact current position
+    oSaved = oText.createTextCursorByRange(oVC.getStart())
+
+    &apos; Work on a duplicate model cursor
+    oTest = oText.createTextCursorByRange(oSaved)
+
+    &apos; Move duplicate to visual line start using a temporary ViewCursor
+    oTempVC = ThisComponent.CurrentController.getViewCursor()
+    oTempVC.gotoRange(oSaved.getStart(), False)
+    oTempVC.gotoStartOfLine(False)
+
+    &apos; Now select from visual start to original position using model cursor
+    oTest.gotoRange(oTempVC, False)
+    oTest.gotoRange(oSaved, True)
+
+    GetCursorColumn = Len(oTest.getString())
+
+    &apos; Restore original cursor position explicitly
+    oVC.gotoRange(oSaved, False)
 End Function
 
 
 &apos; Move the cursor to a specific column on the current line, or to the
 &apos; end of the line if the line is shorter than the requested column.
 Sub SetCursorColumn(col As Integer)
-    Dim oVC, oTest As Object
+	Dim oVC, oTest As Object
+    Dim oLineStart As Object
+    Dim oLineEnd As Object
     Dim i, maxCol As Integer
 
     oVC = getCursor()
@@ -700,21 +748,21 @@ Sub SetCursorColumn(col As Integer)
     	oVC.gotoStartOfLine(False)
     	Exit Sub
     End If
-
+    &apos; Go to start of line
     oVC.gotoStartOfLine(False)
     oVC.gotoEndOfLine(True)
-
     maxCol = Len(oVC.getString())
+    
+    &apos; Reset back to start
     oVC.gotoStartOfLine(False)
     If col &gt; maxCol then col = maxCol
 
-    &apos; Move right up to desired column
     oVC.goRight(col, False)
 End Sub
 
+
 Function ProcessSpecialKey(keyChar)
     dim oTextCursor, bMatched, bIsSpecial, bIsDelete
-    dim savedCol As Integer
     bMatched = True
     bIsSpecial = getSpecial() &lt;&gt; &quot;&quot;
 
@@ -724,12 +772,13 @@ Function ProcessSpecialKey(keyChar)
 
         &apos; Special Cases: &apos;dd&apos; and &apos;cc&apos;
         If bIsSpecial Then
-            dim bIsSpecialCase
+            dim bIsSpecialCase, savedCol As Integer
             &apos; 100=&apos;d&apos;, 99=&apos;c&apos;
             bIsSpecialCase = (keyChar = 100 And getSpecial() = &quot;d&quot;) Or (keyChar = 99 And getSpecial() = &quot;c&quot;) &apos; &apos;dd&apos; or &apos;cc&apos;
 
             If bIsSpecialCase Then
-           		savedCol = GetCursorColumn()
+               
+                savedCol = GetCursorColumn()
 
                 ProcessMovementKey(94, False)  &apos; 94=&apos;^&apos;
                 ProcessMovementKey(106, True)  &apos; 106=&apos;j&apos;
@@ -737,6 +786,7 @@ Function ProcessSpecialKey(keyChar)
                 oTextCursor = getTextCursor()
                 thisComponent.getCurrentController.Select(oTextCursor)
                 yankSelection(bIsDelete)
+
                 &apos; After delete, cursor is at start of the now-current line.
                 &apos; Restore the horizontal position (or go to end if line is shorter).
                 If bIsDelete Then
@@ -841,8 +891,7 @@ Function ProcessMovementModifierKey(keyChar)
     dim bMatched
 
     bMatched = True
-    &apos; 102=&apos;f&apos;, 116=&apos;t&apos;, 70=&apos;F&apos;, 84=&apos;T&apos;, 105=&apos;i&apos;, 97=&apos;a&apos;,
-
+    &apos; 102=&apos;f&apos;, 116=&apos;t&apos;, 70=&apos;F&apos;, 84=&apos;T&apos;, 105=&apos;i&apos;, 97=&apos;a&apos;, 117=&apos;u&apos;
     Select Case keyChar
         Case 102: setMovementModifier(&quot;f&quot;) &apos; &apos;f&apos;
         Case 116: setMovementModifier(&quot;t&quot;) &apos; &apos;t&apos;
@@ -850,7 +899,9 @@ Function ProcessMovementModifierKey(keyChar)
         Case 84:  setMovementModifier(&quot;T&quot;) &apos; &apos;T&apos;
         Case 105: setMovementModifier(&quot;i&quot;) &apos; &apos;i&apos;
         Case 97:  setMovementModifier(&quot;a&quot;) &apos; &apos;a&apos;
- 
+        Case 117:                           &apos; &apos;u&apos; (until)
+            setMovementModifier(&quot;u&quot;)
+            UNTIL_STATE = 0  &apos; Will capture first symbol on next keypress
         Case Else:
             bMatched = False
     End Select
@@ -939,10 +990,6 @@ Function ProcessSearchKey(oTextCursor, searchType, keyChar, bExpand)
 
 End Function
 
-
-
-
-
 &apos; -----------------------
 &apos; Main Movement Function
 &apos; -----------------------
@@ -951,44 +998,50 @@ End Function
 Function ProcessMovementKey(keyChar, Optional bExpand)
     dim oTextCursor, bSetCursor, bMatched
     oTextCursor = getTextCursor()
-    bMatched = True
+    bMatched = False
     If IsMissing(bExpand) Then bExpand = False
-
-        &apos; Ctrl+d (4) and Ctrl+u (21)
-        If keyChar = 4 Then &apos; 4=&apos;d&apos;
-            getCursor().ScreenDown(bExpand)
-            ProcessMovementKey = True
-            Exit Function
-        ElseIf keyChar = 21 Then &apos; 21=&apos;u&apos;
-            getCursor().ScreenUp(bExpand)
-            ProcessMovementKey = True
-            Exit Function
-        Else
-            bMatched = False
-        End If
-
-        ProcessMovementKey = bMatched
-  
-
-
     &apos; Set global cursor to oTextCursor&apos;s new position if moved
     bSetCursor = True
-
 
     &apos; ------------------
     &apos; Movement matching
     &apos; ------------------
 
     &apos; ---------------------------------
-    &apos; Special Case: Modified movements (f/t/F/T/i/a + target key)
+    &apos; Special Case: Modified movements (f/t/F/T/i/a/u + target key(s))
     If getMovementModifier() &lt;&gt; &quot;&quot; Then
         Select Case getMovementModifier()
             &apos; f,F,t,T searching — convert int keyChar to string for search
             Case &quot;f&quot;, &quot;t&quot;, &quot;F&quot;, &quot;T&quot;:
                 bMatched = ProcessSearchKey(oTextCursor, getMovementModifier(), Chr(keyChar), bExpand)
-            Case &quot;a&quot;, &quot;i&quot;:
-                bMatched = GetSymbol(Chr(keyChar), getMovementModifier())
+            Case &quot;i&quot;, &quot;a&quot;:
+                &apos; SelectAroundOrInsideSymbol reads getMovementModifier() itself
+                &apos; and operates directly on getTextCursor(), so bSetCursor is not
+                &apos; needed — the selection is already committed inside the function.
+                bMatched = GetSymbol(keyChar, getMovementModifier())
                 bSetCursor = False
+			Case &quot;iu&quot;, &quot;au&quot;:
+                &apos; &quot;until&quot; modifier requires TWO keypresses: start and end symbols.
+                &apos; The sequence is: d + (i|a) + u + symbol1 + symbol2
+                &apos; MOVEMENT_MODIFIER is &quot;iu&quot; or &quot;au&quot; encoding both the i/a and the u.
+                If UNTIL_STATE = 0 Then
+                    &apos; First keypress after &apos;u&apos;: save the start symbol, wait for end symbol
+                    UNTIL_FIRST_SYMBOL = keyChar
+                    UNTIL_STATE = 1
+                    bMatched = True
+                    bSetCursor = False
+                ElseIf UNTIL_STATE = 1 Then
+                    &apos; Second keypress: we have both symbols, call FindMatchingPair
+                    &apos; Extract the &quot;i&quot; or &quot;a&quot; from the modifier string
+                    Dim innerOrAround As String
+                    innerOrAround = Left(MOVEMENT_MODIFIER, 1)  &apos; &quot;i&quot; or &quot;a&quot;
+                    bMatched = FindMatchingPair(Chr(UNTIL_FIRST_SYMBOL), Chr(keyChar), innerOrAround)
+                    bSetCursor = False
+                    &apos; Reset state after consuming both symbols
+                    UNTIL_STATE = 0
+                    UNTIL_FIRST_SYMBOL = 0
+                End If
+
             Case Else:
                 bSetCursor = False
                 bMatched = False
@@ -1038,29 +1091,30 @@ Function ProcessMovementKey(keyChar, Optional bExpand)
     ElseIf keyChar = 119 Or keyChar = 87 Then &apos; 119=&apos;w&apos;, 87=&apos;W&apos;
         oTextCursor.gotoNextWord(bExpand)
     ElseIf keyChar = 98 Or keyChar = 66 Then  &apos; 98=&apos;b&apos;, 66=&apos;B&apos;
-        oTextCursor.gotoPreviousWord(bExpand)
-    ElseIf keyChar = 103 Then &apos; 103=&apos;g&apos;
-        If getSpecial() = &quot;g&quot; Then 
-            &apos; Handle &apos;gg&apos; (goto start of document)
-            getCursor().gotoStart(bExpand)
-            bSetCursor = False
-            resetSpecial(True)
-        Else
-            &apos; Set special &apos;g&apos; and wait for the next key
-            setSpecial(&quot;g&quot;)
-            bMatched = True
-            bSetCursor = False
-        End If
+	oTextCursor.gotoPreviousWord(bExpand)
+	ElseIf keyChar = 103 Then &apos; 103=&apos;g&apos;
+	If getSpecial() = &quot;g&quot; Then 
+		&apos; Handle &apos;gg&apos; (goto start of document)
+		getCursor().gotoStart(bExpand)
+		bSetCursor = False
+		resetSpecial(True)
+	Else
+		&apos; Set special &apos;g&apos; and wait for the next key
+		setSpecial(&quot;g&quot;)
+		bMatched = True
+		bSetCursor = False
+	End If
 
-    ElseIf keyChar = 71 Then &apos; 71=&apos;G&apos;
-        oTextCursor.gotoEnd(bExpand)
+	ElseIf keyChar = 71 Then &apos; 71=&apos;G&apos;
+	oTextCursor.gotoEnd(bExpand)
 
-    ElseIf keyChar = 48 Then &apos; &apos;0&apos; (Zero) - Absolute start of line
-        getCursor().gotoStartOfLine(bExpand)
-        bSetCursor = False
+	ElseIf keyChar = 48 Then &apos; &apos;0&apos; (Zero) - Absolute start of line
+	getCursor().gotoStartOfLine(bExpand)
+	bSetCursor = False
+
 
     ElseIf keyChar = 101 Then                  &apos; 101=&apos;e&apos;
-        oTextCursor.goRight(1, bExpand)
+		oTextCursor.goRight(1, bExpand)
         oTextCursor.gotoEndOfWord(bExpand)
 
     ElseIf keyChar = 41 Then &apos; 41=&apos;)&apos;
@@ -1189,6 +1243,7 @@ Function FindMatchingPair(startChar As String, endChar As String, modifier As St
 
     FindMatchingPair = False
 End Function
+
 Sub initVibreoffice
     dim oTextCursor
     &apos; Initializing
@@ -1201,9 +1256,7 @@ Sub initVibreoffice
     &apos; Show terminal cursor
     oTextCursor = getTextCursor()
 
-    If oTextCursor Is Nothing Then
-        &apos; Do nothing
-    Else
+    If oTextCursor Then
         cursorReset(oTextCursor)
     End If
 
