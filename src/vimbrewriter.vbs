@@ -71,8 +71,37 @@ Sub setRawStatus(rawText)
     thisComponent.Currentcontroller.StatusIndicator.Start(rawText, 0)
 End Sub
 
+Function PadRight(text As String, length As Integer) As String
+    Dim s As String
+    s = text
+    Do While Len(s) < length
+        s = s & " "
+    Loop
+    If Len(s) > length Then
+        s = Left(s, length)
+    End If
+    PadRight = s
+End Function
+
 Sub setStatus(statusText)
-    setRawStatus(MODE & " | " & statusText & " | special: " & getSpecial() & " | " & "modifier: " & getMovementModifier() & " | pages: " & getPageNum() & "/" & getPageCount() & " | words: " & getWordCount() & " | paragraphs: " & getParagraphCount())
+    Dim nTotalPages As Long
+    Dim nCurrentPage As Integer
+    Dim sFinalStatus As String
+
+    nCurrentPage = getCursor().getPage()
+    nTotalPages = thisComponent.CurrentController.PageCount
+
+    Dim sMode As String : sMode = PadRight(MODE, 12)
+    Dim sStatusText As String : sStatusText = PadRight(statusText, 5)
+    Dim sSpec As String : sSpec = PadRight("special: " & getSpecial(), 11)
+    Dim sMod As String : sMod = PadRight("modifier: " & getMovementModifier(), 12)
+    Dim sPage As String : sPage = PadRight("page: " & nCurrentPage & "/" & nTotalPages, 14)
+    Dim sParagraphs As String : sParagraphs = PadRight("paragraphs: " & getParagraphCount() , 17)
+    Dim sWords As String : sWords = "Words: " & getWordCount()
+
+    sFinalStatus = sMode & " | " & sStatusText & " | " & sSpec & "  | " & sMod & " | " & sPage & " | " & sParagraphs & " | " & sWords
+
+    setRawStatus(sFinalStatus)
 End Sub
 
 Sub setMode(modeName)
@@ -1222,8 +1251,8 @@ Sub initVibreoffice
     End If
 
     sStartXKeyHandler()
-End Sub
 
+End Sub
 
 Sub Main
     If Not VIBREOFFICE_STARTED Then

@@ -34,6 +34,7 @@ global VIBREOFFICE_STARTED as boolean &apos; Defaults to False
 global VIBREOFFICE_ENABLED as boolean &apos; Defaults to False
 
 global oXKeyHandler as object
+global oListener as object
 
 &apos; Global State
 global MODE as string
@@ -74,8 +75,37 @@ Sub setRawStatus(rawText)
     thisComponent.Currentcontroller.StatusIndicator.Start(rawText, 0)
 End Sub
 
+Function PadRight(text As String, length As Integer) As String
+    Dim s As String
+    s = text
+    Do While Len(s) &lt; length
+        s = s &amp; &quot; &quot;
+    Loop
+    If Len(s) &gt; length Then
+        s = Left(s, length)
+    End If
+    PadRight = s
+End Function
+
 Sub setStatus(statusText)
-    setRawStatus(MODE &amp; &quot; | &quot; &amp; statusText &amp; &quot; | special: &quot; &amp; getSpecial() &amp; &quot; | &quot; &amp; &quot;modifier: &quot; &amp; getMovementModifier() &amp; &quot; | pages: &quot; &amp; getPageNum() &amp; &quot;/&quot; &amp; getPageCount() &amp; &quot; | words: &quot; &amp; getWordCount() &amp; &quot; | paragraphs: &quot; &amp; getParagraphCount())
+    Dim nTotalPages As Long
+    Dim nCurrentPage As Integer
+    Dim sFinalStatus As String
+
+    nCurrentPage = getCursor().getPage()
+    nTotalPages = thisComponent.CurrentController.PageCount
+
+    Dim sMode As String : sMode = PadRight(MODE, 12)
+    Dim sStatusText As String : sStatusText = PadRight(statusText, 5)
+    Dim sSpec As String : sSpec = PadRight(&quot;special: &quot; &amp; getSpecial(), 11)
+    Dim sMod As String : sMod = PadRight(&quot;modifier: &quot; &amp; getMovementModifier(), 12)
+    Dim sPage As String : sPage = PadRight(&quot;page: &quot; &amp; nCurrentPage &amp; &quot;/&quot; &amp; nTotalPages, 14)
+    Dim sParagraphs As String : sParagraphs = PadRight(&quot;paragraphs: &quot; &amp; getParagraphCount() , 17)
+    Dim sWords As String : sWords = &quot;Words: &quot; &amp; getWordCount()
+
+    sFinalStatus = sMode &amp; &quot; | &quot; &amp; sStatusText &amp; &quot; | &quot; &amp; sSpec &amp; &quot;  | &quot; &amp; sMod &amp; &quot; | &quot; &amp; sPage &amp; &quot; | &quot; &amp; sParagraphs &amp; &quot; | &quot; &amp; sWords
+
+    setRawStatus(sFinalStatus)
 End Sub
 
 Sub setMode(modeName)
@@ -94,7 +124,7 @@ Function gotoMode(sMode)
             setMode(sMode)
             dim oVC
             oVC = getCursor()
-            
+
             If sMode = &quot;VISUAL LINE&quot; Then
                 oVC.gotoStartOfLine(False)
                 oVC.gotoEndOfLine(True)
@@ -102,8 +132,7 @@ Function gotoMode(sMode)
                 &apos; Standard visual mode (select 1 char)
                 oVC.goRight(1, True)
             End If
-            
-            &apos; Sync text cursor and show selection
+
             thisComponent.getCurrentController.Select(getTextCursor())
     End Select
 End Function
@@ -973,9 +1002,6 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
         End If
 
         If bMatched And MODE = &quot;VISUAL LINE&quot; Then
-            &apos; Ensure the active end of the selection encompasses the full current line.
-            &apos; We snap to the start then the end to ensure the whole line is captured 
-            &apos; regardless of which direction we moved.
             getCursor().gotoStartOfLine(True)
             getCursor().gotoEndOfLine(True)
         End If
@@ -1228,9 +1254,19 @@ Sub initVibreoffice
         cursorReset(oTextCursor)
     End If
 
+    oListener = CreateUnoListener(&quot;Vim_&quot;, &quot;com.sun.star.view.XSelectionChangeListener&quot;)
+    thisComponent.CurrentController.addSelectionChangeListener(oListener)
+
     sStartXKeyHandler()
+
 End Sub
 
+Sub Vim_selectionChanged(oEvent)
+    setStatus(IIf(MULTIPLIER &gt; 0, CStr(MULTIPLIER), &quot;&quot;))
+End Sub
+
+Sub Vim_disposing(oEvent)
+End Sub
 
 Sub Main
     If Not VIBREOFFICE_STARTED Then
