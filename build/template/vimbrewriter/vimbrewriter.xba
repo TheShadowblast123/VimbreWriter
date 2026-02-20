@@ -587,6 +587,12 @@ End Function
 
 
 Function ProcessNumberKey(oEvent)
+    &apos; If a movement modifier (f/F/t/T) is active, do NOT treat digits as multipliers
+    If getMovementModifier() &lt;&gt; &quot;&quot; Then
+        ProcessNumberKey = False
+        Exit Function
+    End If
+
     dim key as Integer
     key = oEvent.KeyChar
 
@@ -598,7 +604,6 @@ Function ProcessNumberKey(oEvent)
         ProcessNumberKey = False
     End If
 End Function
-
 
 Function ProcessModeKey(oEvent)
     dim bIsModified, key as Integer
