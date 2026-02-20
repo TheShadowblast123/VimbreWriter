@@ -584,7 +584,7 @@ End Function
 
 
 Function ProcessNumberKey(oEvent)
-    ' If a movement modifier (f/F/t/T) is active, do NOT treat digits as multipliers
+    ' If a movement modifier (f/F/t/T) is active, digits are target chars, not multipliers
     If getMovementModifier() <> "" Then
         ProcessNumberKey = False
         Exit Function
@@ -595,7 +595,15 @@ Function ProcessNumberKey(oEvent)
 
     ' 48='0' through 57='9'
     If key >= 48 And key <= 57 Then
-        addToMultiplier(key - 48)
+        Dim digit As Integer
+        digit = key - 48
+        ' If multiplier is 0 and the digit is 0, this is the '0' motion, not a multiplier
+        If getRawMultiplier() = 0 And digit = 0 Then
+            ProcessNumberKey = False
+            Exit Function
+        End If
+        ' Otherwise add to multiplier
+        addToMultiplier(digit)
         ProcessNumberKey = True
     Else
         ProcessNumberKey = False
@@ -670,6 +678,12 @@ Function ProcessNormalKey(keyChar, modifiers)
     ' ----------------------
     ' 1. Check Movement Key
     ' ----------------------
+
+    If keyChar = 48 Or keyChar = 94 Then   ' 48='0', 94='^'
+        iMultiplier = 1
+        iRawMultiplier = 0   ' optional, not strictly needed
+    End If
+
     bMatched = ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, bIsVisual, modifiers)
 
     ' If Special: d/c + movement
@@ -1258,10 +1272,51 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
             bSetCursor = False
         End If
     ' ---------------------------------------------
-
-    ElseIf keyChar = 94 Then ' 94='^'
+    '
+    ElseIf keyChar = 48 Then ' 48='0'
         getCursor().gotoStartOfLine(bExpand)
         bSetCursor = False
+
+    ElseIf keyChar = 94 Then ' 94='^'
+        ' --- Move cursor to the first non‑whitespace character on the current line ---
+        Dim originalLineY
+        originalLineY = getCursor().getPosition().Y()
+
+        ' Temporarily select the entire line to extract its text.
+        getCursor().gotoEndOfLine(False)
+        If getCursor().getPosition().Y() > originalLineY Then
+            ' If we landed on the next line (line was exactly one character long), move back.
+            getCursor().goLeft(1, False)
+        End If
+        getCursor().gotoStartOfLine(True)
+        Dim lineText As String
+        lineText = getCursor().String
+
+        ' Restore the original cursor (and any existing selection) before moving.
+        getCursor().gotoRange(oTextCursor, False)
+        getCursor().gotoStartOfLine(bExpand)   ' Start from column 0
+
+        ' Find the index (1‑based) of the first character that is not a space or tab.
+        Dim firstNonBlankPos As Integer
+        firstNonBlankPos = 1
+        Do While firstNonBlankPos <= Len(lineText)
+            Dim ch As String
+            ch = Mid(lineText, firstNonBlankPos, 1)
+            If ch <> " " And ch <> Chr(9) Then   ' space or tab
+                Exit Do
+            End If
+            firstNonBlankPos = firstNonBlankPos + 1
+        Loop
+
+        ' If the line is empty or all whitespace, stay at column 0.
+        If firstNonBlankPos > Len(lineText) Then
+            firstNonBlankPos = 1
+        End If
+
+        ' Move right to the first non‑blank character.
+        getCursor().goRight(firstNonBlankPos - 1, bExpand)
+
+        bSetCursor = False   ' We already moved the view cursor directly
 
     ElseIf keyChar = 36 Then ' 36='$'
         dim oldPos, newPos
