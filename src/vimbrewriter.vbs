@@ -315,7 +315,7 @@ Function getPageNum()
 End Function
 
 Function getPageCount()
-    getPageCount = thisComponent.PageCount
+    getPageCount = thisComponent.CurrentController.PageCount
 End Function
 
 Function getWordCount()
@@ -1284,6 +1284,7 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
     ElseIf keyChar = 103 Then ' 103='g'
         If iRawMultiplier > 0 Then 
             Dim targetPage As Integer
+            Dim itotalPages As Integer
             targetPage = iMultiplier
             itotalPages = getPageCount()
             If targetPage > itotalPages Then targetPage = itotalPages
