@@ -3,8 +3,8 @@
 <description xmlns="http://openoffice.org/extensions/description/2006"
  xmlns:dep="http://openoffice.org/extensions/description/2006"
  xmlns:xlink="http://www.w3.org/1999/xlink" >
-   <identifier value="vibrewriter" />
-   <version value="1.1.30" />
+   <identifier value="vimbrewriter" />
+   <version value="1.1.31" />
    <extension-description>
       <src xlink:href="Descriptions/descr-en.txt" lang="en"/>
    </extension-description>

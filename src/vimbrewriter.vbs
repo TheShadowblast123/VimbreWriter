@@ -819,6 +819,7 @@ Sub Undo(bUndo)
 End Sub
 
 
+
 ' Get the current column position (character offset from start of line).
 ' Used by dd/cc to preserve horizontal position after deleting a line.
 Function GetCursorColumn() As Integer
@@ -1167,7 +1168,7 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
                     End If
                 Next i
             Case "a", "i" :
-                bMatched = GetSymbol(Chr(keyChar), getMovementModifier())
+                bMatched = GetSymbol(keyChar, getMovementModifier())
                 bSetCursor = False
             Case Else :
                 bSetCursor = False
@@ -1399,40 +1400,64 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
     ProcessMovementKey = bMatched
 End Function
 
-Function GetSymbol(symbol As String, modifier As String) As Boolean
-    Dim endSymbol As String
-    Select Case symbol
-        Case "(", ")"
-            symbol = "(" : endSymbol = ")"
-        Case "{", "}"
-            symbol = "{" : endSymbol = "}"
-        Case "[", "]"
-            symbol = "[" : endSymbol = "]"
-        Case "<", ">"
-            symbol = "<" : endSymbol = ">"
-        Case "."
-            symbol = "." : endSymbol = "."
-        Case ","
-            symbol = "," : endSymbol = ","
-        Case "'" :
-            symbol = "‘" : endSymbol = "’"
-            GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
-            If GetSymbol = "" Then
-                GetSymbol = FindMatchingPair("'", "'", modifier)
-                Exit Function
+Function GetSymbol(keyChar As Integer, modifier As String) As Boolean
+    Dim startChar As String, endChar As String
+    Dim bMatched As Boolean
+    Dim oTextCursor As Object
+    Set oTextCursor = getTextCursor()
+
+    ' Map key code to delimiter pair
+    Select Case keyChar
+        Case 40, 41 ' (, )
+            startChar = "("
+            endChar = ")"
+        Case 123, 125 ' {, }
+            startChar = "{"
+            endChar = "}"
+        Case 91, 93 ' [, ]
+            startChar = "["
+            endChar = "]"
+        Case 60, 62 ' <, >
+            startChar = "<"
+            endChar = ">"
+        Case 46 ' . 
+            startChar = "."
+            endChar = "."
+        Case 44 ' , 
+            startChar = ","
+            endChar = ","
+        Case 39 ' ' (single quote)
+            ' Try smart quotes first
+            startChar = Chr(8216) ' ‘
+            endChar = Chr(8217) ' ’
+            bMatched = FindMatchingPair(startChar, endChar, modifier)
+            If Not bMatched Then
+                ' Fallback to straight quotes
+                startChar = "'"
+                endChar = "'"
+                bMatched = FindMatchingPair(startChar, endChar, modifier)
             End If
-        Case Chr(34) :
-            symbol = "“" : endSymbol = "”"
-            GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
-            If GetSymbol = "" Then
-                GetSymbol = FindMatchingPair(Chr(34), Chr(34), modifier)
-                Exit Function
+            GetSymbol = bMatched
+            Exit Function
+        Case 34 ' " (double quote)
+            ' Try smart quotes first
+            startChar = Chr(8220) ' “
+            endChar = Chr(8221) ' ”
+            bMatched = FindMatchingPair(startChar, endChar, modifier)
+            If Not bMatched Then
+                ' Fallback to straight quotes
+                startChar = Chr(34)
+                endChar = Chr(34)
+                bMatched = FindMatchingPair(startChar, endChar, modifier)
             End If
+            GetSymbol = bMatched
+            Exit Function
         Case Else
             GetSymbol = False
             Exit Function
     End Select
-    GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
+
+    GetSymbol = FindMatchingPair(startChar, endChar, modifier)
 End Function
 
 Function FindMatchingPair(startChar As String, endChar As String, modifier As String) As Boolean
