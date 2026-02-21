@@ -2,46 +2,72 @@
 
 *(Unfortunately, vimbrewriter, formerly vibreoffice, was in an experimental stage, and the creator [seanyeh](https://github.com/seanyeh) no longer has much time to work on it. So I guess I'm learning Visual basic to pick up the mantel)*
 
-VimbreWriter is an extension for Libreoffice and OpenOffice that brings some of
-your favorite key bindings from vi/vim to your favorite office suite, with a heavy focus on librewriter.
+VimbreWriter is an extension for LibreOffice and OpenOffice that brings key bindings from vi/vim to your office suite. It is a continuation of the experimental vibreoffice project, written in StarBasic.
 
-### Installation/Usage
+## Features
 
-The easiest way to install is to download the
-[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.0.oxt)
-and open it with LibreOffice/OpenOffice.
+- **Modes**: Normal, Insert, Visual, Visual Line.
+- **Movement**: `h`, `j`, `k`, `l`, `w`, `b`, `e`, `$`, `^`, `G`, `gg`, `{`, `}`, `C-d`, `C-u`
+- **Editing**: `d`, `c`, `y`, `p`, `x`, `r`, `o`, `O`.
+- **Compound Commands**: `dd`, `cc`, `dw`, `cw`
+- **Search**: `f,F`, `t,T` (inline), `/` (find), `\` (find & replace dialog).
+- **Undo/Redo**: `u`, `C-r`.
 
-To enable/disable vimbrewriter, simply select Tools -> Add-Ons -> vimbrewriter.
+## Installation
 
-If you really want to, you can build the .oxt file yourself by running
-```shell
-# replace 0.0.0 with your desired version number
-VIMBREWRITER_VERSION="0.0.0" make extension
+### From Release
+Download the latest `.oxt` extension file and open it with LibreOffice/OpenOffice, or go to **Tools -> Extension Manager** to add it.
+
+### From Source
+You can build and install the extension yourself using the provided Makefile.
+
+```bash
+# Build the extension (creates .oxt in dist/)
+VIMBREWRITER_VERSION="0.0.1" make extension
+
+# Install directly (requires unopkg)
+VIMBREWRITER_VERSION="0.0.1" make install
 ```
-This will simply build the extension file from the template files in
-`extension/template`. These template files were auto-generated using
-[Extension Compiler](https://wiki.openoffice.org/wiki/Extensions_Packager#Download).
 
+To enable/disable VimbreWriter, go to **Tools -> Add-Ons -> VimbreWriter**.
 
-### Features
+## Developer Guidelines
 
-vimbrewriter currently supports:
-- Insert (`i`, `I`, `a`, `A`, `o`, `O`), Visual (`v`), Normal modes
-- Movement keys: `hjkl`, `w`, `W`, `b`, `B`, `e`, `$`, `^`, `{}`, `()`, `C-d`, `C-u`
-    - Search movement: `f`, `F`, `t`, `T`
-- Number modifiers: e.g. `5w`, `4fa`
-- Replace: `r`
-- Deletion: `x`, `d`, `c`, `s`, `D`, `C`, `S`, `dd`, `cc`
-    - Plus movement and number modifiers: e.g. `5dw`, `c3j`, `2dfe`
-    - Delete a/inner block: e.g. `di(`, `da{`, `ci[`, `ci"`, `ca'`
-- Undo/redo: `u`, `C-r`
-- Copy/paste: `y`, `p`, `P` (using system clipboard, not vim-like registers)
-### Added functionality
-- (`d`/`c`)(`a`/`i`)(`,`/`.`) Delete/Change Around/Inside Commas/Periods for enhanced word editing
-    - example: `ca,` Change Around Commas
-- (`d`/`c`)(`a`/`i`)`u`(`any`/`any`) Delete/Change Around/Inside almost any two symbols example
-    - example: `diu:.` Delete Inside Unmatched Colon and Period
+### Changing Code
+The core logic resides in `@src/vimbrewriter.vbs`. This is a Visual Basic script.
+- **Logic**: All key handling, state management (Modes), and document manipulation happen here.
+- **Conventions**: Maintain the existing indentation and variable naming style
 
+### Testing
+Use the Makefile to streamline the testing loop.
+
+```bash
+# Builds the testing extension, kills running LibreOffice instances,
+# installs the extension, and opens the test document.
+# uninstalls after quitting soffice
+make testing
+```
+**Warning**: `make testing` will kill `soffice.bin`. Save your work in other documents before running.
+
+### Formatting
+- run make lint
+- Keep indentation consistent (spaces/tabs as per existing file).
+
+### Bindings (Compact)
+
+| Key | Action | Key | Action |
+| :--- | :--- | :--- | :--- |
+| `h` `j` `k` `l` | Left, Down, Up, Right | `i` `I` `a` `A` | Insert (before/line start/after/line end) |
+| `w` `W` `b` `B` | Next/Prev Word | `o` `O` | Open line below/above |
+| `e` | End of word | `x` | Delete char |
+| `^` `$` | Start/End of line | `r` | Replace char |
+| `gg` `G` | Top/Bottom of doc | `u` `C-r` | Undo / Redo |
+| `f` `t` | Find char inline | `v` `V` | Visual / Visual Line Mode |
+| `{` `}` | Prev/Next Paragraph | `/` | Find |
+| `(` `)` | Prev/Next Sentence | `\` | Find & Replace Dialog |
+| `d` `c` `y` | Delete, Change, Yank | `p` `P` | Paste after/before |
+
+**Note**: Operators like `d`, `c`, `y` work with motions (e.g., `dw`, `cw`).
 
 ### Known differences/issues
 - tag block deletion doesn't work, but I don't believe it's necessary,

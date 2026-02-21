@@ -21,7 +21,7 @@ else ifeq ($(UNAME_S),Darwin)
     BASIC_DIR = $(HOME)/Library/Application Support/LibreOffice/4/user/basic
 endif
 
-.PHONY: testing clean install uninstall
+.PHONY: testing clean install uninstall lint
 
 # ----------------------------------------------------------------------
 # Testing – builds, installs, and launches LibreOffice
@@ -108,3 +108,6 @@ uninstall:
 # ----------------------------------------------------------------------
 clean:
 	rm -rf build
+
+lint:
+	./format-code.sh
