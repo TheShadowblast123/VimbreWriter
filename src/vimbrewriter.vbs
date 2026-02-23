@@ -556,7 +556,7 @@ End Function
 
 
 Function ProcessStandardMovementKey(oEvent)
-    Dim c, bMatched
+    Dim c, bMatched, dispatcher, i, nMult
     c = oEvent.KeyCode
 
     bMatched = True
@@ -576,6 +576,18 @@ Function ProcessStandardMovementKey(oEvent)
                 ProcessMovementKey(94, 1, 0, True) ' 94='^'
             Case 1029 ' End
                 ProcessMovementKey(36, 1, 0, True) ' 36='$'
+            Case 1030 ' Page Up
+                dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+                nMult = getMultiplier()
+                For i = 1 To nMult
+                    dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PageUpSel", "", 0, Array())
+                Next i
+            Case 1031 ' Page Down
+                dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+                nMult = getMultiplier()
+                For i = 1 To nMult
+                    dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PageDownSel", "", 0, Array())
+                Next i
             Case Else
                 bMatched = False
         End Select
@@ -1117,7 +1129,7 @@ End Function
 '   Default: bExpand = False, keyModifiers = 0
 '   keyChar is an ASCII integer (e.g. 104 for 'h')
 Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpand, Optional keyModifiers)
-    Dim oTextCursor, bSetCursor, bMatched, i
+    Dim oTextCursor, bSetCursor, bMatched, i, dispatcher
     oTextCursor = getTextCursor()
     bMatched = True
     If IsMissing(bExpand) Then bExpand = False
@@ -1126,17 +1138,29 @@ Function ProcessMovementKey(keyChar, iMultiplier, iRawMultiplier, Optional bExpa
 
     ' Check for modified keys (Ctrl, Alt, not Shift)
     If keyModifiers > 1 Then
-        Dim bIsControl
+        Dim bIsControl, bIsCtrlShift
         bIsControl = (keyModifiers = 2) Or (keyModifiers = 8)
+        bIsCtrlShift = (keyModifiers = 3) Or (keyModifiers = 9)
 
-        ' Ctrl+d (100) and Ctrl+u (117)
-        If bIsControl And keyChar = 100 Then ' 100='d'
+        ' Ctrl+Shift+> (Page Down)
+        If bIsCtrlShift And (keyChar = 62 Or keyChar = 46) Then ' > or .
+            dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
             For i = 1 To iMultiplier
-                getCursor().ScreenDown(bExpand)
+                If bExpand Then
+                    dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PageDownSel", "", 0, Array())
+                Else
+                    getCursor().ScreenDown(False)
+                End If
             Next i
-        ElseIf bIsControl And keyChar = 117 Then ' 117='u'
+            ' Ctrl+Shift+< (Page Up)
+        ElseIf bIsCtrlShift And (keyChar = 60 Or keyChar = 44) Then ' < or ,
+            dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
             For i = 1 To iMultiplier
-                getCursor().ScreenUp(bExpand)
+                If bExpand Then
+                    dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PageUpSel", "", 0, Array())
+                Else
+                    getCursor().ScreenUp(False)
+                End If
             Next i
         Else
             bMatched = False
