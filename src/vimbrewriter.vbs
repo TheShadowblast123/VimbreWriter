@@ -463,6 +463,14 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
         iLen = Len(getCursor().getString())
         getCursor().setString(Chr(oEvent.KeyChar))
 
+    ElseIf oEvent.KeyChar = 58 Then ' 58=:
+        If MODE = "NORMAL" Or MODE = "VISUAL" Or MODE = "VISUAL_LINE" Then
+            setSpecial("CMD")
+            bConsumeInput = True
+        Else
+            bConsumeInput = False
+        End If
+
         ' Multiplier Key
     ElseIf ProcessNumberKey(oEvent) Then
         bIsMultiplier = True
@@ -679,9 +687,83 @@ Function ProcessModeKey(oEvent)
     ProcessModeKey = bMatched
 End Function
 
+Sub HandleCommand(keyChar As Integer)
+    Dim oTextCursor As Object
+    Dim oViewCursor As Object
+    Dim oStartPos As Object
+    Dim dispatcher As Object
+
+    Set oViewCursor = getCursor()
+    Set oTextCursor = getTextCursor()
+
+    ' If no selection, select the current word
+    If oTextCursor.isCollapsed() Then
+        Set oTextCursor = oViewCursor.getText().createTextCursorByRange(oViewCursor.getStart())
+        oTextCursor.gotoStartOfWord(False)
+        oTextCursor.gotoEndOfWord(True)
+        If oTextCursor.isCollapsed() Then
+            ' No word under cursor (e.g., whitespace) – do nothing
+            Exit Sub
+        End If
+        Set oStartPos = oTextCursor.getStart()
+        ' Set the controller’s selection to this word
+        ThisComponent.getCurrentController().Select(oTextCursor)
+    Else
+        Set oStartPos = oTextCursor.getStart()
+        ' Selection already active, no need to change controller selection
+    End If
+
+    Set dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+
+    Select Case keyChar
+        Case 98 ' b -> Bold
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Bold", "", 0, Array())
+        Case 117 ' u -> Underline
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Underline", "", 0, Array())
+        Case 105 ' i -> Italic
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Italic", "", 0, Array())
+        Case 116 ' t -> Strike through
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Strikeout", "", 0, Array())
+        Case 115 ' s -> Subscript
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:SubScript", "", 0, Array())
+        Case 83 ' S -> Superscript
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:SuperScript", "", 0, Array())
+        Case 104 ' h -> Highlight (yellow background)
+            oTextCursor.CharBackColor = RGB(255, 255, 0) ' Yellow
+        Case 93 ' ] -> Indent increase
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:IncrementIndent", "", 0, Array())
+        Case 91 ' [ -> Indent decrease
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:DecrementIndent", "", 0, Array())
+        Case 108 ' l -> Align left
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignLeft", "", 0, Array())
+        Case 114 ' r -> Align right
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignRight", "", 0, Array())
+        Case 101 ' e -> Align center
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignHorizontalCenter", "", 0, Array())
+        Case 106 ' j -> Justify
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignJustified", "", 0, Array())
+        Case Else
+            ' Unknown command – do nothing and exit
+            Exit Sub
+    End Select
+
+    ' Return to Normal mode and place cursor at the start of the formatted range
+    gotoMode("NORMAL")
+    oViewCursor.gotoRange(oStartPos, False)
+End Sub
 
 Function ProcessNormalKey(keyChar, modifiers)
+
+    If getSpecial() = "CMD" Then
+        HandleCommand(keyChar)
+        setSpecial("")
+        resetMultiplier()
+        ProcessNormalKey = True
+        Exit Function
+    End If
+
     Dim i, bMatched, bIsVisual, iMultiplier, iRawMultiplier, bIsControl
+
     bIsControl = (modifiers = 2) Or (modifiers = 8)
 
     bIsVisual = (MODE = "VISUAL" Or MODE = "VISUAL_LINE")
