@@ -238,6 +238,10 @@ Function gotoMode(sMode)
         Case "VISUAL_LINE" :
             setMode("VISUAL_LINE")
             formatVisualBase()
+        Case "CMD" :
+            setMode("CMD")
+            setMovementModifier("")
+            setSpecial("")
     End Select
 End Function
 
@@ -298,8 +302,10 @@ Sub pasteSelection(bUnformatted As Boolean, bAfter As Boolean, nMultiplier As In
     For i = 1 To nMultiplier
         If bUnformatted Then
             oDispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PasteUnformatted", "", 0, Array())
+            getCursor().goRight(1, False)
         Else
             oDispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Paste", "", 0, Array())
+            getCursor().goRight(1, False)
         End If
     Next i
 
@@ -472,9 +478,20 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
     If ProcessGlobalKey(oEvent) Then
         ' Pass
 
+    ElseIf (MODE = "NORMAL" Or MODE = "VISUAL" Or MODE = "VISUAL_LINE") And oEvent.KeyChar = 58 And getSpecial() = "" And getMovementModifier() = "" Then
+        ' Colon pressed – enter command mode
+        gotoMode("CMD")
+        bConsumeInput = True
+
         ' If INSERT mode, allow all inputs
     ElseIf MODE = "INSERT" Then
         bConsumeInput = False
+
+    ElseIf MODE = "CMD" Then
+        ' In command mode: the next key is the command (e.g., 'b' for bold)
+        HandleCommand(oEvent.KeyChar)
+        gotoMode("NORMAL")
+        bConsumeInput = True
 
         ' If Change Mode
         ' ElseIf MODE = "NORMAL" And Not bIsSpecial And getMovementModifier() = "" And ProcessModeKey(oEvent) Then
@@ -486,14 +503,6 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
         Dim iLen
         iLen = Len(getCursor().getString())
         getCursor().setString(Chr(oEvent.KeyChar))
-
-    ElseIf oEvent.KeyChar = 58 Then ' 58=:
-        If MODE = "NORMAL" Or MODE = "VISUAL" Or MODE = "VISUAL_LINE" Then
-            setSpecial("CMD")
-            bConsumeInput = True
-        Else
-            bConsumeInput = False
-        End If
 
         ' Multiplier Key
     ElseIf ProcessNumberKey(oEvent) Then
@@ -789,14 +798,6 @@ End Sub
 
 Function ProcessNormalKey(keyChar, modifiers)
 
-    If getSpecial() = "CMD" Then
-        HandleCommand(keyChar)
-        setSpecial("")
-        resetMultiplier()
-        ProcessNormalKey = True
-        Exit Function
-    End If
-
     Dim i, bMatched, bIsVisual, iMultiplier, iRawMultiplier, bIsControl
 
     ' Set dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
@@ -860,6 +861,7 @@ Function ProcessNormalKey(keyChar, modifiers)
     If keyChar = 112 Then ' p
         pasteSelection False, True, iMultiplier
         ProcessNormalKey = True
+
         Exit Function
     End If
 
@@ -944,6 +946,7 @@ Sub Undo(bUndo)
     ErrorHandler:
     Resume Next
 End Sub
+
 
 
 
