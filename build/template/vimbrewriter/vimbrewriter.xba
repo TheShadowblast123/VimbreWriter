@@ -723,17 +723,17 @@ Function ProcessNormalKey(keyChar, modifiers)
 
 
     &apos; --------------------
-    &apos; 2. Undo/Redo
+    &apos; 2. Undo/Redo, USE DEFAULT ctrl+z and ctrl+y
     &apos; --------------------
     &apos; 117=&apos;u&apos;, 114=&apos;r&apos; (Ctrl+r = redo)
-    If keyChar = 117 Or (bIsControl And keyChar = 114) Then &apos; u or Ctrl+r
-        For i = 1 To iMultiplier
-            Undo(keyChar = 117)
-        Next i
-
-        ProcessNormalKey = True
-        Exit Function
-    End If
+    &apos; If keyChar = 117 Or (bIsControl And keyChar = 114) Then &apos; u or Ctrl+r
+    &apos;     For i = 1 To iMultiplier
+    &apos;         Undo(keyChar = 117)
+    &apos;     Next i
+    &apos;
+    &apos;     ProcessNormalKey = True
+    &apos;     Exit Function
+    &apos; End If
 
 
     &apos; --------------------
