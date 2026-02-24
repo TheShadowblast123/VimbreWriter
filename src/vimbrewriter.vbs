@@ -274,21 +274,45 @@ Sub yankSelection(bDelete)
 End Sub
 
 
-Sub pasteSelection()
-    Dim oTextCursor, dispatcher As Object
+Sub pasteSelection(bUnformatted As Boolean, bAfter As Boolean, nMultiplier As Integer)
+    Dim oDispatcher As Object
+    Dim bWasVisual As Boolean
+    bWasVisual = (MODE = "VISUAL" Or MODE = "VISUAL_LINE")
 
-    ' Deselect if in NORMAL mode to avoid overwriting the character underneath
-    ' the cursor
+    ' --- Normal mode: deselect and optionally move cursor ---
     If MODE = "NORMAL" Then
-        oTextCursor = getTextCursor()
-        oTextCursor.gotoRange(oTextCursor.getStart(), False)
-        thisComponent.getCurrentController.Select(oTextCursor)
+        Dim oTempCursor
+        oTempCursor = getTextCursor()
+        oTempCursor.gotoRange(oTempCursor.getStart(), False)
+        thisComponent.getCurrentController.Select(oTempCursor)
+
+        If bAfter Then
+            ' Move right one to paste *after* the current character
+            getCursor().goRight(1, False)
+        End If
     End If
 
-    dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
-    dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Paste", "", 0, Array())
-End Sub
+    ' --- Perform paste nMultiplier times ---
+    Set oDispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+    Dim i As Integer
+    For i = 1 To nMultiplier
+        If bUnformatted Then
+            oDispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PasteUnformatted", "", 0, Array())
+        Else
+            oDispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Paste", "", 0, Array())
+        End If
+    Next i
 
+    ' --- Position cursor on the last pasted character ---
+    If MODE = "NORMAL" Then
+        ' In Normal mode, cursor should rest on the last character of pasted text
+        getCursor().goLeft(1, False)
+    ElseIf bWasVisual Then
+        ' If we started in Visual mode, return to Normal and land on last character
+        gotoMode("NORMAL")
+        getCursor().goLeft(1, False)
+    End If
+End Sub
 
 ' -----------------------------------
 ' Special Mode (for chained commands)
@@ -692,9 +716,12 @@ Sub HandleCommand(keyChar As Integer)
     Dim oViewCursor As Object
     Dim oStartPos As Object
     Dim dispatcher As Object
+    Dim iMultiplier
+
 
     Set oViewCursor = getCursor()
     Set oTextCursor = getTextCursor()
+    iMultiplier = getMultiplier()
 
     ' If no selection, select the current word
     If oTextCursor.isCollapsed() Then
@@ -716,32 +743,40 @@ Sub HandleCommand(keyChar As Integer)
     Set dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
 
     Select Case keyChar
-        Case 98 ' b -> Bold
+        Case 98 '  b -> Bold
             dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Bold", "", 0, Array())
-        Case 117 ' u -> Underline
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Underline", "", 0, Array())
-        Case 105 ' i -> Italic
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Italic", "", 0, Array())
-        Case 116 ' t -> Strike through
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Strikeout", "", 0, Array())
-        Case 115 ' s -> Subscript
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:SubScript", "", 0, Array())
-        Case 83 ' S -> Superscript
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:SuperScript", "", 0, Array())
+        Case 101 ' e -> Align center
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignHorizontalCenter", "", 0, Array())
         Case 104 ' h -> Highlight (yellow background)
             oTextCursor.CharBackColor = RGB(255, 255, 0) ' Yellow
+        Case 105 ' i -> Italic
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Italic", "", 0, Array())
+        Case 106 ' j -> Justify
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignJustified", "", 0, Array())
+        Case 108 ' l -> Align left
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignLeft", "", 0, Array())
+        Case 112 ' p -> paste 
+            pasteSelection False, True, iMultiplier
+            Exit Sub
+        Case 80 ' P -> unformattd paste
+            pasteSelection True, False, iMultiplier
+            Exit Sub
+        Case 114 ' r -> Align right
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignRight", "", 0, Array())
+        Case 115 ' s -> Subscript
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:SubScript", "", 0, Array())
+        Case 83 '  S -> Superscript
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:SuperScript", "", 0, Array())
+        Case 116 ' t -> Strike through
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Strikeout", "", 0, Array())
+        Case 117 ' u -> Underline
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Underline", "", 0, Array())
+        Case 119 ' w -> save Document
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Save", "", 0, Array())
         Case 93 ' ] -> Indent increase
             dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:IncrementIndent", "", 0, Array())
         Case 91 ' [ -> Indent decrease
             dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:DecrementIndent", "", 0, Array())
-        Case 108 ' l -> Align left
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignLeft", "", 0, Array())
-        Case 114 ' r -> Align right
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignRight", "", 0, Array())
-        Case 101 ' e -> Align center
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignHorizontalCenter", "", 0, Array())
-        Case 106 ' j -> Justify
-            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignJustified", "", 0, Array())
         Case Else
             ' Unknown command – do nothing and exit
             Exit Sub
@@ -763,6 +798,8 @@ Function ProcessNormalKey(keyChar, modifiers)
     End If
 
     Dim i, bMatched, bIsVisual, iMultiplier, iRawMultiplier, bIsControl
+
+    ' Set dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
 
     bIsControl = (modifiers = 2) Or (modifiers = 8)
 
@@ -817,21 +854,17 @@ Function ProcessNormalKey(keyChar, modifiers)
 
     ' --------------------
     ' 3. Paste
-    '   Note: in vim, paste will result in cursor being over the last character
-    '   of the pasted content. Here, the cursor will be the next character
-    '   after that. Fix?
+    '   Note: in vim, paste will result in cursor being over the last character of the pasted content. Here, the cursor will be the next character after that. Fix?
     ' --------------------
     ' 112='p', 80='P'
-    If keyChar = 112 Or keyChar = 80 Then ' 'p' or 'P'
-        ' Move cursor right if "p" to paste after cursor
-        If keyChar = 112 Then
-            ProcessMovementKey(108, 1, 0, False) ' 108='l'
-        End If
+    If keyChar = 112 Then ' p
+        pasteSelection False, True, iMultiplier
+        ProcessNormalKey = True
+        Exit Function
+    End If
 
-        For i = 1 To iMultiplier
-            pasteSelection()
-        Next i
-
+    If keyChar = 80 Then ' P
+        pasteSelection True, False, iMultiplier
         ProcessNormalKey = True
         Exit Function
     End If
@@ -856,12 +889,12 @@ Function ProcessNormalKey(keyChar, modifiers)
     ' 92 is the key code for '\'
     If keyChar = 92 Then ' \
         Dim frame as Object
-        Dim dispatcher as Object
+        Dim dispatcherSearchDialog as Object
         frame = thisComponent.CurrentController.Frame
-        dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+        dispatcherSearchDialog = createUnoService("com.sun.star.frame.DispatchHelper")
 
         ' Launches the built-in Find & Replace dialog
-        dispatcher.executeDispatch(frame, ".uno:SearchDialog", "", 0, Array())
+        dispatcherSearchDialog.executeDispatch(frame, ".uno:SearchDialog", "", 0, Array())
 
         ProcessNormalKey = True
         Exit Function
