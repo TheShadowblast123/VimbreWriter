@@ -42,6 +42,7 @@ global VISUAL_BASE as object ' Position of first selected line in VISUAL_LINE
 ' ----------------------------------
 global LAST_PAGE as integer
 global oSelectionListener as object
+global PREV_MODE as String
 
 ' -----------
 ' Singletons
@@ -480,6 +481,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 
     ElseIf (MODE = "NORMAL" Or MODE = "VISUAL" Or MODE = "VISUAL_LINE") And oEvent.KeyChar = 58 And getSpecial() = "" And getMovementModifier() = "" Then
         ' Colon pressed – enter command mode
+        PREV_MODE = MODE
         gotoMode("CMD")
         bConsumeInput = True
 
@@ -490,7 +492,12 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
     ElseIf MODE = "CMD" Then
         ' In command mode: the next key is the command (e.g., 'b' for bold)
         HandleCommand(oEvent.KeyChar)
-        gotoMode("NORMAL")
+
+        If PREV_MODE <> "" Then
+            setMode(PREV_MODE)
+        Else
+            gotoMode("NORMAL")
+        End If
         bConsumeInput = True
 
         ' If Change Mode
@@ -757,7 +764,7 @@ Sub HandleCommand(keyChar As Integer)
         Case 101 ' e -> Align center
             dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignHorizontalCenter", "", 0, Array())
         Case 104 ' h -> Highlight (yellow background)
-            oTextCursor.CharBackColor = RGB(255, 255, 0) ' Yellow
+            dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CharBackColor", "", 0, Array())
         Case 105 ' i -> Italic
             dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Italic", "", 0, Array())
         Case 106 ' j -> Justify
@@ -766,10 +773,8 @@ Sub HandleCommand(keyChar As Integer)
             dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignLeft", "", 0, Array())
         Case 112 ' p -> paste 
             pasteSelection False, True, iMultiplier
-            Exit Sub
         Case 80 ' P -> unformattd paste
             pasteSelection True, False, iMultiplier
-            Exit Sub
         Case 114 ' r -> Align right
             dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:CommonAlignRight", "", 0, Array())
         Case 115 ' s -> Subscript
@@ -792,8 +797,6 @@ Sub HandleCommand(keyChar As Integer)
     End Select
 
     ' Return to Normal mode and place cursor at the start of the formatted range
-    gotoMode("NORMAL")
-    oViewCursor.gotoRange(oStartPos, False)
 End Sub
 
 Function ProcessNormalKey(keyChar, modifiers)
