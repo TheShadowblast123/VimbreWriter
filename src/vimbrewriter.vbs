@@ -492,7 +492,7 @@ End Function
 '   landed.  When selecting=True, also commits the new selection to the
 '   controller so LibreOffice renders the highlight.
 ' ========================================================================
-Function HandleMovements(keyChar As Integer, selecting As Boolean) As Boolean
+Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Boolean) As Boolean
 
     Dim oTC   As Object   ' model text cursor — used for character/word moves
     Dim oldPos As Object
@@ -605,7 +605,7 @@ Function HandleMovements(keyChar As Integer, selecting As Boolean) As Boolean
             getCursor().gotoRange(oTC.getStart(), selecting)
 
         Case Else
-		    Select Case oEvent.KeyCode
+		    Select Case keyCode
 				Case 1024 : getCursor().goDown(1, selecting)           ' ↓
 				Case 1025 : getCursor().goUp(1, selecting)             ' ↑
 				Case 1026 : getCursor().goLeft(1, selecting)           ' ←
@@ -646,13 +646,6 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
     If oTextCursor Is Nothing Then
         KeyHandler_KeyPressed = False
         Exit Function
-    ElseIf getSpecial() = "r" Then
-		dim iLen
-		iLen = Len(getCursor().getString())
-		getCursor().setString(Chr(oEvent.KeyChar))
-		resetSpecial()
-		cursorReset(oTextCursor)
-		Exit Function
 	ElseIf HandleUnMatchedPairs() then
 		KeyHandler_KeyPressed = true
 		Exit Function
@@ -660,6 +653,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 	consumeInput = True
 	IsMultiplier = False
 	keyChar = oEvent.KeyChar
+	KeyHandler_KeyPressed = true
 	Select Case MODE
 		Case "INSERT"
 			
@@ -668,11 +662,9 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			
 				resetSpecial(True)
 				gotoMode("NORMAL")
-				KeyHandler_KeyPressed = True
 				cursorReset(oTextCursor)
 				Exit Function
 			Else	
-			
 				resetSpecial()
 				oTextCursor.gotoRange(oTextCursor.getStart(), False)
 				thisComponent.getCurrentController.Select(oTextCursor)
@@ -698,6 +690,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 				Else 
 					gotoMode("NORMAL")
 				End If
+				
 				setMovementModifier("") : resetSpecial(True)
 				GoTo NormalDone
 			End If
@@ -773,7 +766,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 									GoTo NormalDone
 
 								Case Else   ' any other key: treat as motion
-									If HandleMovements(keyChar, True) Then
+									If HandleMovements(keyChar, oEvent.KeyCode, True) Then
 										yankSelection(getSpecial() <> "y")
 										If getSpecial() = "c" Then gotoMode("INSERT") Else gotoMode("NORMAL")
 										resetSpecial(True)
@@ -787,7 +780,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 						GoTo NormalDone
 
 					Case "y"
-						If HandleMovements(keyChar, True) Then
+						If HandleMovements(keyChar, oEvent.KeyCode, True) Then
 							yankSelection(False)
 							gotoMode("NORMAL")
 						ElseIf keyChar = 121 Then   ' yy — yank whole line
@@ -804,11 +797,10 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 						GoTo NormalDone
 
 					Case "r" 
-						iLen = Len(getCursor().getString())
 						getCursor().setString(Chr(oEvent.KeyChar))
-						resetSpecial()
-						cursorReset(oTextCursor)
 						resetSpecial(True)
+						cursorReset(oTextCursor)
+						KeyHandler_KeyPressed = True
 						Exit Function
 
 				End Select
@@ -822,7 +814,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 				Exit Function
 			End If
 			
-			If HandleMovements(keyChar, False) Then
+			If HandleMovements(keyChar, oEvent.KeyCode, False) Then
 				GoTo NormalDone
 			End If
 			
@@ -1001,7 +993,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			
 			
 			End Select
-			If HandleMovements(keyChar, False) Then
+			If HandleMovements(keyChar, oEvent.KeyCode, False) Then
 				GoTo FormatDone
 			End If
 			FormatDone:
@@ -1047,7 +1039,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 				Goto VisualDone
 			
 			End If
-			If HandleMovements(keyChar, True) Then
+			If HandleMovements(keyChar, oEvent.KeyCode, True) Then
 				GoTo VisualDone
 			End If
 			Select Case keyChar:
@@ -1161,8 +1153,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			setStatus(getMultiplier())
 			' In VISUAL we leave the selection visible; cursorReset is for NORMAL only.
 			If MODE = "NORMAL" Then
-				oTC = getTextCursor()
-				If Not (oTC Is Nothing) Then cursorReset(oTC)
+				If Not (getTextCursor() Is Nothing) Then cursorReset(oTC)
 			End If
 			KeyHandler_KeyPressed = consumeInput
 			Exit Function
