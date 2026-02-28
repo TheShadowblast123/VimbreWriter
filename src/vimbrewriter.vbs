@@ -3,8 +3,8 @@ Option Explicit
 ' --------
 ' Globals
 ' --------
-global VIBREOFFICE_STARTED as boolean ' Defaults to False
-global VIBREOFFICE_ENABLED as boolean ' Defaults to False
+global VIBREOFFICE_STARTED as boolean ' Defaults To False
+global VIBREOFFICE_ENABLED as boolean ' Defaults To False
 
 global oXKeyHandler as object
 
@@ -12,7 +12,7 @@ global oXKeyHandler as object
 global MODE as string
 global VIEW_CURSOR as object
 global MULTIPLIER as integer
-
+global VISUAL_BASE as object 
 ' -----------
 ' Singletons
 ' -----------
@@ -21,7 +21,7 @@ Function getCursor
 End Function
 
 Function getTextCursor
-    dim oTextCursor  as Object
+    Dim oTextCursor  as Object
     On Error Goto ErrorHandler
     oTextCursor = getCursor().getText.createTextCursorByRange(getCursor())
 
@@ -37,7 +37,7 @@ End Function
 ' Helper Functions
 ' -----------------
 Sub restoreStatus 'restore original statusbar
-    dim oLayout
+    Dim oLayout
     oLayout = thisComponent.getCurrentController.getFrame.LayoutManager
     oLayout.destroyElement("private:resource/statusbar/statusbar")
     oLayout.createElement("private:resource/statusbar/statusbar")
@@ -48,14 +48,16 @@ Sub setRawStatus(rawText)
 End Sub
 
 Sub setStatus(statusText)
-	setRawStatus( _
+	    setRawStatus( _
 		MODE & _
-		" | Page: " & getPageNum() & "/" & getTotalPages() & _
-		" | Word Count: " & getWordcount() & _
 		" | " & statusText & _
 		" | special: " & getSpecial() & _
-		" | modifier: " & getMovementModifier() _
-	)
+		" | " & "modifier: " & getMovementModifier() & _
+		" | Page: " & getPageNum() & "/" & getPageCount() _
+		" | Words: " & getWordCount() & _ 
+		" | Paragraphs: " & getParagraphCount() & _
+		" | " & getCurrentFileName()
+		)
 
 End Sub
 
@@ -66,23 +68,35 @@ End Sub
 
 Function gotoMode(sMode)
     Select Case sMode
-        Case "NORMAL":
+        Case "NORMAL"
             setMode("NORMAL")
             setMovementModifier("")
-        Case "INSERT":
+        Case "INSERT"
             setMode("INSERT")
-        Case "VISUAL":
+        Case "VISUAL"
             setMode("VISUAL")
 			resetSpecial()
 
-            dim oTextCursor
+            Dim oTextCursor
             oTextCursor = getTextCursor()
             ' Deselect TextCursor
             oTextCursor.gotoRange(oTextCursor.getStart(), False)
             ' Show TextCursor selection
             thisComponent.getCurrentController.Select(oTextCursor)
-		Case "FORMAT":           ' <-- ADD THIS
+		Case "VISUAL LINE"
+			setMode("VISUAL LINE")
+		
+			Dim oVC
+            oVC = getTextCursor()
+			
+			oVC.gotoStartOfLine(False)
+            oVC.gotoEndOfLine(True)
+			
+			 thisComponent.getCurrentController.Select(oTextCursor)
+		Case "FORMAT"
             setMode("FORMAT")
+		Case "COMMAND"
+			setMode("COMMAND")
     End Select
 End Function
 
@@ -101,17 +115,22 @@ Function getPageNum()
     getPageNum = getCursor().getPage()
 End Function
 
-Function getTotalPages()
-    getTotalPages = thisComponent.CurrentController.PageCount
+Function getPageCount()
+    getPageCount = thisComponent.CurrentController.PageCount
 End Function
-Function getWordcount()
-    getWordcount = ThisComponent.DocumentProperties.DocumentStatistics(5).value
-
+Function getWordCount()
+    getWordCount = ThisComponent.DocumentProperties.DocumentStatistics(5).value
+End Function
+Function getParagraphCount()
+	getParagraphCount = ThisComponent.ParagraphCount
 End Function
 
+Function getCurrentFileName()
+    getCurrentFileName = thisComponent.getTitle()
+End Function
 
 Function genString(sChar, iLen)
-    dim sResult, i
+    Dim sResult, i
     sResult = ""
     For i = 1 To iLen
         sResult = sResult & sChar
@@ -119,10 +138,10 @@ Function genString(sChar, iLen)
     genString = sResult
 End Function
 
-' Yanks selection to system clipboard.
+' Yanks selection To system clipboard.
 ' If bDelete is true, will delete selection.
 Sub yankSelection(bDelete)
-    dim dispatcher as object
+    Dim dispatcher as object
     dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
     dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:Copy", "", 0, Array())
 
@@ -133,9 +152,9 @@ End Sub
 
 
 Sub pasteSelection()
-    dim oTextCursor, dispatcher as object
+    Dim oTextCursor, dispatcher as object
 
-    ' Deselect if in NORMAL mode to avoid overwriting the character underneath
+    ' Deselect if in NORMAL mode To avoid overwriting the character underneath
     ' the cursor
     If MODE = "NORMAL" Then
         oTextCursor = getTextCursor()
@@ -188,14 +207,14 @@ End Sub
 'f,i,a,u (can be combined: "iu" or "au")
 global MOVEMENT_MODIFIER as string
 
-' For the "u" (until) modifier, we need to capture two symbols.
+' For the "u" (until) modifier, we need To capture two symbols.
 ' This tracks which keypress we're on (0=none, 1=waiting for second symbol)
 global UNMATCHED_STATE as integer
 global UNTIL_FIRST_SYMBOL as integer  ' ASCII code of first symbol
 
 Sub setMovementModifier(modifierName)
-    ' Special case: if we're transitioning from "i" or "a" to "u",
-    ' concatenate to preserve the i/a information (becomes "iu" or "au")
+    ' Special case: if we're transitioning from "i" or "a" To "u",
+    ' concatenate To preserve the i/a information (becomes "iu" or "au")
     If modifierName = "u" And (MOVEMENT_MODIFIER = "i" Or MOVEMENT_MODIFIER = "a") Then
         MOVEMENT_MODIFIER = MOVEMENT_MODIFIER & "u"
     Else
@@ -226,8 +245,8 @@ Sub resetMultiplier()
 End Sub
 
 Sub addToMultiplier(n as integer)
-    dim sMultiplierStr as string
-    dim iMultiplierInt as integer
+    Dim sMultiplierStr as string
+    Dim iMultiplierInt as integer
 
     ' Max multiplier: 10000 (stop accepting additions after 1000)
     If MULTIPLIER <= 1000 then
@@ -241,7 +260,7 @@ Function getRawMultiplier()
     getRawMultiplier = MULTIPLIER
 End Function
 
-' Same as getRawMultiplier, but defaults to 1 if it is unset (0)
+' Same as getRawMultiplier, but defaults To 1 if it is unset (0)
 Function getMultiplier()
     If MULTIPLIER = 0 Then
         getMultiplier = 1
@@ -249,25 +268,57 @@ Function getMultiplier()
         getMultiplier = MULTIPLIER
     End If
 End Function
+'Visual Line mode selector function'
+Function formatVisualBase()
+    dim oTextCursor
+    oTextCursor = getTextCursor()
+    VISUAL_BASE = getCursor().getPosition()
 
-
+    ' Select the current line by moving cursor To start of the line below and
+    ' then back To the start of the current line.
+    getCursor().gotoEndOfLine(False)
+    If getCursor().getPosition().Y() = VISUAL_BASE.Y() Then
+        getCursor().goRight(1, False)
+    End If
+    getCursor().goLeft(1, True)
+    getCursor().gotoStartOfLine(True)
+End Function
 ' -------------
 ' Key Handling
 ' -------------
 Sub sStartXKeyHandler
     sStopXKeyHandler()
-
+	
     oXKeyHandler = CreateUnoListener("KeyHandler_", "com.sun.star.awt.XKeyHandler")
     thisComponent.CurrentController.AddKeyHandler(oXKeyHandler)
 End Sub
 
 Sub sStopXKeyHandler
     thisComponent.CurrentController.removeKeyHandler(oXKeyHandler)
+	If Not IsNull(oSelectionListener) Then
+		ThisComponent.CurrentController.removeSelectionChangeListener(oSelectionListener)
+	End If
+
 End Sub
 
+Sub SelectionChange_selectionChanged(oEvent)
+    On Error Goto ErrorHandler
+    If Not VIBREOFFICE_ENABLED Then Exit Sub
+    Dim currentPage As Integer
+    currentPage = getPageNum()
+    If currentPage <> LAST_PAGE Then
+        LAST_PAGE = currentPage
+        setStatus(getMultiplier())
+    End If
+    Exit Sub
+ErrorHandler:
+    ' Ignore
+End Sub
 Sub XKeyHandler_Disposing(oEvent)
 End Sub
-
+Sub SelectionChange_disposing(oEvent)
+    ' Required by XEventListener interface; do nothing.
+End Sub
 Sub Main
     If Not VIBREOFFICE_STARTED Then
         initVibreoffice()
@@ -279,7 +330,7 @@ Sub Main
 End Sub
 
 Sub initVibreoffice
-    dim oTextCursor
+    Dim oTextCursor
     ' Initializing
     VIBREOFFICE_STARTED = True
     VIEW_CURSOR = thisComponent.getCurrentController.getViewCursor
@@ -295,6 +346,9 @@ Sub initVibreoffice
     End If
 
     sStartXKeyHandler()
+	LAST_PAGE = getPageNum()
+	oSelectionListener = CreateUnoListener("SelectionChange_", "com.sun.star.view.XSelectionChangeListener")
+	ThisComponent.CurrentController.addSelectionChangeListener(oSelectionListener)
 End Sub
 
 Sub UndoRedo(bUndo)
@@ -313,9 +367,9 @@ ErrorHandler:
 End Sub
 
 ' Get the current column position (character offset from start of line).
-' Used by dd/cc to preserve horizontal position after deleting a line.
+' Used by dd/cc To preserve horizontal position after deleting a line.
 Function GetCursorColumn() as integer
-	dim oVC, oText, oSaved, oTest as object
+	Dim oVC, oText, oSaved, oTest, oTempVC as object
 
     oVC = ThisComponent.CurrentController.getViewCursor()
     oText = ThisComponent.Text
@@ -326,12 +380,12 @@ Function GetCursorColumn() as integer
     ' Work on a duplicate model cursor
     oTest = oText.createTextCursorByRange(oSaved)
 
-    ' Move duplicate to visual line start using a temporary ViewCursor
+    ' Move duplicate To visual line start using a temporary ViewCursor
     oTempVC = ThisComponent.CurrentController.getViewCursor()
     oTempVC.gotoRange(oSaved.getStart(), False)
     oTempVC.gotoStartOfLine(False)
 
-    ' Now select from visual start to original position using model cursor
+    ' Now select from visual start To original position using model cursor
     oTest.gotoRange(oTempVC, False)
     oTest.gotoRange(oSaved, True)
 
@@ -342,58 +396,58 @@ Function GetCursorColumn() as integer
 End Function
 
 
-' Move the cursor to a specific column on the current line, or to the
+' Move the cursor To a specific column on the current line, or To the
 ' end of the line if the line is shorter than the requested column.
 Sub SetCursorColumn(col as integer)
-	dim oVC, oTest as object
-    dim i, maxCol as integer
+	Dim oVC, oTest as object
+    Dim i, maxCol as integer
 
     oVC = getCursor()
     If col <= 0 Then 
     	oVC.gotoStartOfLine(False)
     	Exit Sub
     End If
-    ' Go to start of line
+    ' Go To start of line
     oVC.gotoStartOfLine(False)
     oVC.gotoEndOfLine(True)
     maxCol = Len(oVC.getString())
     
-    ' Reset back to start
+    ' Reset back To start
     oVC.gotoStartOfLine(False)
     If col > maxCol then col = maxCol
 
     oVC.goRight(col, False)
 End Sub
 
-Function GetSymbol(symbol as string, modifier as string) as boolean
-    dim endSymbol as string
+Function GetSymbol(symbol as Integer, modifier as String) as boolean
+    Dim endSymbol as String
     Select Case symbol
-        Case "(", ")"
+        Case 40,41 ' (, )
             symbol = "(" : endSymbol = ")"
-        Case "{", "}"
+        Case 123, 125 ' {, }
             symbol = "{" : endSymbol = "}"
-        Case "[", "]"
+        Case 91, 93 ' [, ]
             symbol = "[" : endSymbol = "]"
-        Case "<", ">"
+        Case 60, 62 ' <, >
             symbol = "<" : endSymbol = ">"
-        Case "."
+        Case 46 ' . 
             symbol = "." : endSymbol = "."
-        Case ","
+        Case 44 ' ,
             symbol = "," : endSymbol = ","
         Case "'":
             symbol = "‘" : endSymbol = "’"
             GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
-            If GetSymbol = "" Then
+            If Not GetSymbol Then
             	GetSymbol = FindMatchingPair("'", "'", modifier)
-            	Exit Function
             End If
+			Exit Function
         Case Chr(34):
             symbol = "“" : endSymbol = "”"
             GetSymbol = FindMatchingPair(symbol, endSymbol, modifier)
-            If GetSymbol = "" Then
+            If Not GetSymbol Then
             	GetSymbol = FindMatchingPair(Chr(34), Chr(34), modifier)
-            	Exit Function
             End If
+			Exit Function
         Case Else
             GetSymbol = False
             Exit Function
@@ -402,9 +456,9 @@ Function GetSymbol(symbol as string, modifier as string) as boolean
 End Function
 
 Function FindMatchingPair(startChar as string, endChar as string, modifier as string) as boolean
-    dim oDoc, oCursor, oTempCursor, forwardPos as object
-    dim i, j as integer
-    dim foundForward as boolean
+    Dim oDoc, oCursor, oTempCursor, forwardPos as object
+    Dim i, j as integer
+    Dim foundForward as boolean
 
     oDoc = ThisComponent
 
@@ -434,9 +488,9 @@ Function FindMatchingPair(startChar as string, endChar as string, modifier as st
         Set oTempCursor = oDoc.Text.createTextCursorByRange(oCursor.getStart())
         oTempCursor.goLeft(1, True)
         If oTempCursor.getString() = startChar Then
-            dim startPos as object
-            dim endPos as object
-            dim oEndCursor as object
+            Dim startPos as object
+            Dim endPos as object
+            Dim oEndCursor as object
 
             If modifier = "a" Then
                 Set startPos = oTempCursor.getStart()
@@ -449,7 +503,7 @@ Function FindMatchingPair(startChar as string, endChar as string, modifier as st
                 Set endPos = forwardPos
             End If
 
-            ' Move the VIEW cursor to startPos, then select to endPos
+            ' Move the VIEW cursor To startPos, then select To endPos
             ' getTextCursor() derives from getCursor(), so this is what yankSelection needs
             getCursor().gotoRange(startPos, False)
             getCursor().gotoRange(endPos, True)
@@ -471,7 +525,7 @@ Function HandleUnMatchedPairs() as boolean
 		ElseIf UNMATCHED_STATE = 1 Then
 			' Second keypress: we have both symbols, call FindMatchingPair
 			' Extract the "i" or "a" from the modifier string
-			dim innerOrAround as string
+			Dim innerOrAround as string
 			innerOrAround = Left(MOVEMENT_MODIFIER, 1)  ' "i" or "a"
 			
 			' Reset state after consuming both symbols
@@ -488,8 +542,8 @@ End Function
 '   False if the key was not a movement key (caller should handle it)
 '
 ' Side effects:
-'   Always syncs getCursor() (the view cursor) to wherever the movement
-'   landed.  When selecting=True, also commits the new selection to the
+'   Always syncs getCursor() (the view cursor) To wherever the movement
+'   landed.  When selecting=True, also commits the new selection To the
 '   controller so LibreOffice renders the highlight.
 ' ========================================================================
 Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Boolean) As Boolean
@@ -501,7 +555,7 @@ Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Bo
 
     oTC = getTextCursor()
 
-    ' Assume we handle the key; set to False in the Case Else.
+    ' Assume we handle the key; set To False in the Case Else.
     HandleMovements = True
 
     Select Case keyChar
@@ -530,74 +584,88 @@ Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Bo
             Next i
 
         Case 4      ' Ctrl+d — scroll down half a screen
-            getCursor().ScreenDown(False)
+            getCursor().ScreenDown(selecting)
 
         Case 21     ' Ctrl+u — scroll up half a screen
-            getCursor().ScreenUp(False)
+            getCursor().ScreenUp(selecting)
+			
+		Case 1030 ' Page Up
+			dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+			For i = 1 To getMultiplier()
+				dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PageUpSel", "", 0, Array())
+			Next i
+		Case 1031 ' Page Down
+			dispatcher = createUnoService("com.sun.star.frame.DispatchHelper")
+			For i = 1 To getMultiplier()
+				dispatcher.executeDispatch(ThisComponent.CurrentController.Frame, ".uno:PageDownSel", "", 0, Array())
+			Next i
 
-        Case 119, 87    ' w / W — forward to start of next word
+        Case 119, 87    ' w / W — forward To start of next word
             For i = 1 To getMultiplier()
                 oTC.gotoNextWord(selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
-        Case 101    ' e — forward to end of current or next word
+        Case 101    ' e — forward To end of current or next word
             For i = 1 To getMultiplier()
                 oTC.goRight(1, selecting)
                 oTC.gotoEndOfWord(selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
-        Case 98, 66     ' b / B — backward to start of previous word
+        Case 98, 66     ' b / B — backward To start of previous word
             For i = 1 To getMultiplier()
+				If oTC.isStartOfParagraph() Then
+					oTC.goLeft(1, bExpand)
+				End If
                 oTC.gotoPreviousWord(selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
-        Case 94     ' ^ — jump to first non-blank character of line
+        Case 94     ' ^ — jump To first non-blank character of line
             ' Use the view cursor directly; gotoStartOfLine is not on model cursors.
             getCursor().gotoStartOfLine(selecting)
 
-        Case 36     ' $ — jump to last character of line
+        Case 36     ' $ — jump To last character of line
             oldPos = getCursor().getPosition()
             getCursor().gotoEndOfLine(selecting)
             newPos = getCursor().getPosition()
-            ' gotoEndOfLine can wrap to the start of the NEXT line on some
+            ' gotoEndOfLine can wrap To the start of the NEXT line on some
             ' paragraph ends; step back one position if that happened.
             If getCursor().isAtStartOfLine() And oldPos.Y() <> newPos.Y() Then
                 getCursor().goLeft(1, selecting)
             End If
 
-        Case 48     ' 0 — jump to absolute start of line (column 0)
+        Case 48     ' 0 — jump To absolute start of line (column 0)
 			If getRawMultiplier = 0 then
 				getCursor().gotoStartOfLine(selecting)
 			End If
-        Case 71     ' G — jump to end of document
+        Case 71     ' G — jump To end of document
             oTC.gotoEnd(selecting)
             getCursor().gotoRange(oTC.getStart(), selecting)
 
-        Case 123    ' { — jump to start of previous paragraph
+        Case 123    ' { — jump To start of previous paragraph
             For i = 1 To getMultiplier()
                 oTC.gotoPreviousParagraph(selecting)
                 oTC.goRight(1, selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
-        Case 125    ' } — jump to start of next paragraph
+        Case 125    ' } — jump To start of next paragraph
             For i = 1 To getMultiplier()
                 oTC.gotoNextParagraph(selecting)
                 oTC.goLeft(1, selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
-        Case 40     ' ( — jump to start of previous sentence
+        Case 40     ' ( — jump To start of previous sentence
             For i = 1 To getMultiplier()
                 oTC.gotoPreviousSentence(selecting)
                 oTC.goLeft(1, selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
-        Case 41     ' ) — jump to start of next sentence
+        Case 41     ' ) — jump To start of next sentence
             For i = 1 To getMultiplier()
                 oTC.gotoNextSentence(selecting)
                 oTC.goLeft(1, selecting)
@@ -606,12 +674,25 @@ Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Bo
 
         Case Else
 		    Select Case keyCode
-				Case 1024 : getCursor().goDown(1, selecting)           ' ↓
-				Case 1025 : getCursor().goUp(1, selecting)             ' ↑
-				Case 1026 : getCursor().goLeft(1, selecting)           ' ←
-				Case 1027 : getCursor().goRight(1, selecting)          ' →
-				Case 1028 : getCursor().gotoStartOfLine(selecting)     ' Home => ^
-				Case 1029                                          ' End  => $
+				Case 1024 ' ↓
+					For i = 1 To getMultiplier()
+						getCursor().goDown(1, selecting) 
+					Next i
+				Case 1025 ' ↑
+					For i = 1 To getMultiplier()
+						getCursor().goUp(1, selecting)
+					Next i
+				Case 1026 ' ←
+					For i = 1 To getMultiplier()
+						getCursor().goLeft(1, selecting)           
+					Next i
+				Case 1027 ' →
+					For i = 1 To getMultiplier()
+						getCursor().goRight(1, selecting)          
+					Next i
+				Case 1028 ' Home => ^
+					getCursor().gotoStartOfLine(selecting)     
+				Case 1029  ' End  => $
 					oldPos = getCursor().getPosition()
 					getCursor().gotoEndOfLine(selecting)
 					newPos = getCursor().getPosition()
@@ -624,7 +705,7 @@ Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Bo
 			End Select
     End Select
 
-    ' When selecting, commit the updated selection to the controller so
+    ' When selecting, commit the updated selection To the controller so
     ' LibreOffice renders the highlight correctly.
     If selecting Then
         ThisComponent.getCurrentController().Select(getTextCursor())
@@ -632,9 +713,9 @@ Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Bo
 
 End Function
 Function KeyHandler_KeyPressed(oEvent) as boolean
-    dim oTextCursor
-	dim consumeInput, IsMultiplier as boolean
-	dim keyChar as integer
+    Dim oTextCursor
+	Dim consumeInput, IsMultiplier as boolean
+	Dim keyChar as integer
 
     ' Exit if plugin is not enabled
     If IsMissing(VIBREOFFICE_ENABLED) Or Not VIBREOFFICE_ENABLED Then
@@ -676,8 +757,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			   getMovementModifier() = "F" Or getMovementModifier() = "T" Then
 				Dim bExpFTN As Boolean
 				bExpFTN = (getSpecial() = "d" Or getSpecial() = "c" Or getSpecial() = "y")
-				iMult = getMultiplier()
-				For i = 1 To iMult
+				For i = 1 To getMultiplier()
 					ProcessSearchKey(oTextCursor, getMovementModifier(), Chr(keyChar), bExpFTN)
 				Next i
 				getCursor().gotoRange(oTextCursor.getStart(), False)
@@ -698,7 +778,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			If getSpecial() <> "" Then
 				Select Case getSpecial()
 					Case "g"
-						If keyChar = 103 Then   ' gg → go to start of document
+						If keyChar = 103 Then   ' gg → go To start of document
 							getCursor().gotoStart(False)
 						End If
 						resetSpecial(True)
@@ -739,13 +819,13 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 
 								Case 100    ' d — dd: delete whole line
 									If getSpecial() = "c" Then GoTo Fallout  ' cd does nothing
+									Dim savedCol
 									savedCol = GetCursorColumn()
 									getCursor().gotoStartOfLine(False)
-									Set oTCstart = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
+									oTextCursor = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
 									getCursor().gotoEndOfLine(False)
-									getCursor().goRight(1, False)           ' include line break
-									oTCstart.gotoRange(getCursor().getEnd(), True)
-									ThisComponent.getCurrentController().Select(oTCstart)
+									oTextCursor.gotoRange(getCursor().getEnd(), True)
+									ThisComponent.getCurrentController().Select(oTextCursor)
 									yankSelection(True)
 									SetCursorColumn(savedCol)
 									gotoMode("NORMAL")
@@ -755,11 +835,10 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 								Case 99     ' c — cc: change whole line
 									If getSpecial() = "d" Then GoTo Fallout  ' dc does nothing
 									getCursor().gotoStartOfLine(False)
-									Set oTCstart = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
+									Set oTextCursor = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
 									getCursor().gotoEndOfLine(False)
-									getCursor().goRight(1, False)
-									oTCstart.gotoRange(getCursor().getEnd(), True)
-									ThisComponent.getCurrentController().Select(oTCstart)
+									oTextCursor.gotoRange(getCursor().getEnd(), True)
+									ThisComponent.getCurrentController().Select(oTextCursor)
 									yankSelection(True)
 									gotoMode("INSERT")
 									resetSpecial(True)
@@ -785,7 +864,8 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 							gotoMode("NORMAL")
 						ElseIf keyChar = 121 Then   ' yy — yank whole line
 							getCursor().gotoStartOfLine(False)
-							Set oTCstart = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
+							Dim oTCstart
+							oTCstart = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
 							getCursor().gotoEndOfLine(False)
 							getCursor().goRight(1, False)
 							oTCstart.gotoRange(getCursor().getEnd(), True)
@@ -838,9 +918,21 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 					setSpecial("d")
 					delaySpecialReset()
 					
-				Case 103    ' g — first half of gg
-					setSpecial("g") 
-					delaySpecialReset()
+				Case 103    ' g —  gg or page jump
+					If getRawMultiplier() > 0 Then 
+						Dim targetPage As Integer
+						Dim itotalPages As Integer
+
+						targetPage = getRawMultiplier()
+						itotalPages = getPageCount()
+						If targetPage > itotalPages Then targetPage = itotalPages
+
+						getCursor().jumpToPage(targetPage, bExpand)
+						oTextCursor.gotoRange(getCursor().getStart(), bExpand)
+					Else
+						setSpecial("g") ' gg
+						delaySpecialReset()
+					End If
 				Case 121 ' y => yank
 					setSpecial("y")
 					delaySpecialReset()
@@ -849,20 +941,28 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 					delaySpecialReset()
 				Case 118    ' v - visual mode
 					gotoMode("VISUAL")
+				Case 86: ' 86='V'
+					gotoMode("VISUAL LINE")
+					
 				Case 105    ' i — INSERT at cursor position
 					gotoMode("INSERT")
+					Exit Function
+
 
 				Case 97     ' a — APPEND: INSERT after the cursor character
 					getCursor().goRight(1, False)
 					gotoMode("INSERT")
+					Exit Function
 
 				Case 73     ' I — INSERT at start of the current line
 					getCursor().gotoStartOfLine(False)
 					gotoMode("INSERT")
+					Exit Function
 
 				Case 65     ' A — APPEND at end of the current line
 					getCursor().gotoEndOfLine(False)
 					gotoMode("INSERT")
+					Exit Function
 
 				Case 111    ' o — open a new line BELOW the cursor, enter INSERT
 					getCursor().gotoEndOfLine(False)
@@ -873,6 +973,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 						getCursor().goRight(1, False)
 					End If
 					gotoMode("INSERT")
+					Exit Function
 
 				Case 79     ' O — open a new line ABOVE the cursor, enter INSERT
 					getCursor().gotoStartOfLine(False)
@@ -883,6 +984,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 						getCursor().goRight(1, False)
 					End If
 					gotoMode("INSERT")
+					Exit Function
 					
 				Case 47     ' / — focus the find bar
 					dsp = createUnoService("com.sun.star.frame.DispatchHelper")
@@ -894,51 +996,53 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 					dsp.executeDispatch(ThisComponent.CurrentController.Frame, _
 						".uno:SearchDialog", "", 0, Array())
 				
-				Case 68     ' D — delete from cursor to end of line
-					oTC.gotoRange(oTC.getStart(), False)
-					ThisComponent.getCurrentController().Select(oTC)
+				Case 68     ' D — delete from cursor To end of line
+					oTextCursor.gotoRange(oTextCursor.getStart(), False)
+					ThisComponent.getCurrentController().Select(oTextCursor)
 					oldPos = getCursor().getPosition()
 					getCursor().gotoEndOfLine(True)
 					newPos = getCursor().getPosition()
 					If getCursor().isAtStartOfLine() And oldPos.Y() <> newPos.Y() Then
 						getCursor().goLeft(1, True)
 					End If
-					Set oTCop = ThisComponent.getText().createTextCursorByRange(getCursor())
-					ThisComponent.getCurrentController().Select(oTCop)
+					oTextCursor = ThisComponent.getText().createTextCursorByRange(getCursor())
+					ThisComponent.getCurrentController().Select(oTextCursor)
 					yankSelection(True)
 					gotoMode("NORMAL")
 
-				Case 67     ' C — change from cursor to end of line
-					oTC.gotoRange(oTC.getStart(), False)
-					ThisComponent.getCurrentController().Select(oTC)
+				Case 67     ' C — change from cursor To end of line
+					oTextCursor.gotoRange(oTextCursor.getStart(), False)
+					ThisComponent.getCurrentController().Select(oTextCursor)
 					oldPos = getCursor().getPosition()
 					getCursor().gotoEndOfLine(True)
 					newPos = getCursor().getPosition()
 					If getCursor().isAtStartOfLine() And oldPos.Y() <> newPos.Y() Then
 						getCursor().goLeft(1, True)
 					End If
-					Set oTCop = ThisComponent.getText().createTextCursorByRange(getCursor())
-					ThisComponent.getCurrentController().Select(oTCop)
+					oTextCursor = ThisComponent.getText().createTextCursorByRange(getCursor())
+					ThisComponent.getCurrentController().Select(oTextCursor)
 					yankSelection(True)
 					gotoMode("INSERT")
+					Exit Function
 
 				Case 83     ' S — substitute entire line (change whole line)
 					getCursor().gotoStartOfLine(False)
-					Set oTCop = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
+					oTextCursor = ThisComponent.getText().createTextCursorByRange(getCursor().getStart())
 					getCursor().gotoEndOfLine(False)
-					oTCop.gotoRange(getCursor().getEnd(), True)
-					ThisComponent.getCurrentController().Select(oTCop)
+					oTextCursor.gotoRange(getCursor().getEnd(), True)
+					ThisComponent.getCurrentController().Select(oTextCursor)
 					yankSelection(True)
 					gotoMode("INSERT")
+					Exit Function
 
 				Case 120    ' x — delete character under cursor
-					For i = 1 To iMult
-						oTC = getTextCursor()
-						ThisComponent.getCurrentController().Select(oTC)
+					For i = 1 To getMultiplier()
+						oTextCursor = getTextCursor()
+						ThisComponent.getCurrentController().Select(oTextCursor)
 						yankSelection(True)
 					Next i
-					oTC = getTextCursor()
-					If Not (oTC Is Nothing) Then cursorReset(oTC)
+					oTextCursor = getTextCursor()
+					If Not (oTextCursor Is Nothing) Then cursorReset(oTextCursor)
 				
 				Case 112    ' p — paste AFTER cursor (move right first)
 					getCursor().goRight(1, False)
@@ -1012,7 +1116,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			End If
 			If getSpecial () <> "" Then
 				' for now only g triggers special and only gg is implemented
-				If keyChar = 103 Then   ' gg → go to start of document
+				If keyChar = 103 Then   ' gg → go To start of document
 					getCursor().gotoStart(False)
 				End If
 						
@@ -1026,10 +1130,10 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 				Dim sModFTV As String
 				sModFTV = getMovementModifier()
 				For i = 1 To getMultiplier()
-					FindChar(oTC, sModFTV, Chr(keyChar), True)
+					FindChar(oTextCursor, sModFTV, Chr(keyChar), True)
 				Next i
-				getCursor().gotoRange(oTC.getStart(), False)
-				ThisComponent.getCurrentController().Select(oTC)
+				getCursor().gotoRange(oTextCursor.getStart(), False)
+				ThisComponent.getCurrentController().Select(oTextCursor)
 				setMovementModifier("")
 				GoTo VisualDone
 			End If
@@ -1085,10 +1189,10 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 					setMovementModifier("a")
 				' Case 111    '  o => It hops around the selection???
 				' Case 79     ' O => It hops around the selection???
-				' Case 68     ' D => is supposed to delete selection and current line, feels unnecessary
-				' Case 67     ' C => is supposed to delete selection and current line, feels unnecessary
-				' Case 83     ' S —=> is supposed to delete selection and current line (I think), feels unnecessary
-				' Case 114    r => It is supposed to replace all selected characters... idk If that's necessary
+				' Case 68     ' D => is supposed To delete selection and current line, feels unnecessary
+				' Case 67     ' C => is supposed To delete selection and current line, feels unnecessary
+				' Case 83     ' S —=> is supposed To delete selection and current line (I think), feels unnecessary
+				' Case 114    r => It is supposed To replace all selected characters... idk If that's necessary
 				
 				Case 47     ' / — focus the find bar
 					dsp = createUnoService("com.sun.star.frame.DispatchHelper")
@@ -1100,14 +1204,14 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 					dsp.executeDispatch(ThisComponent.CurrentController.Frame, _
 						".uno:SearchDialog", "", 0, Array())
 				
-				Case 120    ' x — just deletes selection and goes to normal mode
-					For i = 1 To iMult
-						oTC = getTextCursor()
-						ThisComponent.getCurrentController().Select(oTC)
+				Case 120    ' x — just deletes selection and goes To normal mode
+					For i = 1 To getMultiplier()
+						oTextCursor = getTextCursor()
+						ThisComponent.getCurrentController().Select(oTextCursor)
 						yankSelection(True)
 					Next i
-					oTC = getTextCursor()
-					If Not (oTC Is Nothing) Then cursorReset(oTC)
+					oTextCursor = getTextCursor()
+					If Not (oTextCursor Is Nothing) Then cursorReset(oTextCursor)
 					gotoMode("Normal")
 				
 				Case 112    ' p — paste AFTER cursor (move right first)
@@ -1153,18 +1257,38 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			setStatus(getMultiplier())
 			' In VISUAL we leave the selection visible; cursorReset is for NORMAL only.
 			If MODE = "NORMAL" Then
-				If Not (getTextCursor() Is Nothing) Then cursorReset(oTC)
+				If Not (getTextCursor() Is Nothing) Then cursorReset(oTextCursor)
 			End If
 			KeyHandler_KeyPressed = consumeInput
 			Exit Function
+		Case "Command"
+			If oEvent.KeyCode = 1281 Then
+
+				resetSpecial(True)
+				gotoMode("NORMAL")
+				KeyHandler_KeyPressed = True
+				cursorReset(oTextCursor)
+				Exit Function
+			End If
+			
+		Case "VISUAL"
+			If oEvent.KeyCode = 1281 Then
+
+				resetSpecial(True)
+				gotoMode("NORMAL")
+				KeyHandler_KeyPressed = True
+				cursorReset(oTextCursor)
+				Exit Function
+			End If
+			
 	End Select
 
 	KeyHandler_KeyPressed = consumeInput
 End Function
 Function KeyHandler_KeyReleased(oEvent) as boolean
     ' Always consume the KeyReleased event in NORMAL, FORMAT, and VISUAL
-    ' mode. Returning False lets the release propagate to LibreOffice, 
-    ' which re-processes it as input — causing every command to fire
+    ' mode. Returning False lets the release propagate To LibreOffice, 
+    ' which re-processes it as input — causing every command To fire
     ' twice. INSERT mode passes releases through so the application can
     ' handle auto-complete, IME, etc. normally.
     KeyHandler_KeyReleased = (MODE <> "INSERT")
