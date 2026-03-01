@@ -3,7 +3,7 @@
 <description xmlns="http://openoffice.org/extensions/description/2006"
  xmlns:dep="http://openoffice.org/extensions/description/2006"
  xmlns:xlink="http://www.w3.org/1999/xlink" >
-   <identifier value="vibrewriter" />
+   <identifier value="vimbrewriter" />
    <version value="%VIMBREWRITER_VERSION%" />
    <extension-description>
       <src xlink:href="Descriptions/descr-en.txt" lang="en"/>
@@ -15,9 +15,9 @@
       <name lang="en">Vimbrewriter - Vi-Mode Extension</name>
    </display-name>
    <publisher>
-      <name lang="en" xlink:href="http://www.seanyeh.com">Sean Yeh</name>
+      <name lang="en" xlink:href="http://www.seanyeh.com">(Sean Yeh) Former creator of VibreOffice</name>
    </publisher>
    <release-notes>
-      <src lang="en" xlink:href="https://github.com/seanyeh/vibreoffice"/>
+      <src lang="en" xlink:href="https://github.com/TheShadowblast123/VimbreWriter"/>
    </release-notes>
 </description>

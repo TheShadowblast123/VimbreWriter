@@ -8,7 +8,7 @@ your favorite key bindings from vi/vim to your favorite office suite, with a hea
 ### Installation/Usage
 
 The easiest way to install is to download the
-[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.24.oxt)
+[latest extension file](https://raw.github.com/TheShadowblast123/vimbrewriter/master/dist/vimbrewriter-1.1.30.oxt)
 and open it with LibreOffice/OpenOffice.
 
 To enable/disable vimbrewriter, simply select Tools -> Add-Ons -> vimbrewriter.
