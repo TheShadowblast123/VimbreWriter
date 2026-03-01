@@ -13,6 +13,8 @@ global MODE as string
 global VIEW_CURSOR as object
 global MULTIPLIER as integer
 global VISUAL_BASE as object 
+global LAST_PAGE as integer
+global oSelectionListener as object
 ' -----------
 ' Singletons
 ' -----------
@@ -53,10 +55,10 @@ Sub setStatus(statusText)
 		" | " & statusText & _
 		" | special: " & getSpecial() & _
 		" | " & "modifier: " & getMovementModifier() & _
-		" | Page: " & getPageNum() & "/" & getPageCount() _
+		" | Page: " & getPageNum() & "/" & getPageCount() & _
 		" | Words: " & getWordCount() & _ 
 		" | Paragraphs: " & getParagraphCount() & _
-		" | " & getCurrentFileName()
+		" | " & getCurrentFileName() _
 		)
 
 End Sub
@@ -283,9 +285,85 @@ Function formatVisualBase()
     getCursor().goLeft(1, True)
     getCursor().gotoStartOfLine(True)
 End Function
-' -------------
-' Key Handling
-' -------------
+Function ProcessSearchKey(oTextCursor, searchType, keyChar, bExpand)
+    '-----------
+    ' Searching
+    ' keyChar here is a string (the literal character to find), not an ascii int.
+    ' It is passed in from ProcessMovementKey after converting with Chr().
+    '-----------
+    Dim bMatched, oSearchDesc, oFoundRange, bIsBackwards, oStartRange
+    bMatched = True
+    bIsBackwards = (searchType = "F" Or searchType = "T")
+
+    If Not bIsBackwards Then
+        ' VISUAL mode will goRight AFTER the selection
+        If MODE <> "VISUAL" Then
+            ' Start searching from next character
+            oTextCursor.goRight(1, bExpand)
+        End If
+
+        oStartRange = oTextCursor.getEnd()
+        ' Go back one
+        oTextCursor.goLeft(1, bExpand)
+    Else
+        oStartRange = oTextCursor.getStart()
+    End If
+
+    oSearchDesc = thisComponent.createSearchDescriptor()
+    oSearchDesc.setSearchString(keyChar)
+    oSearchDesc.SearchCaseSensitive = True
+    oSearchDesc.SearchBackwards = bIsBackwards
+
+    oFoundRange = thisComponent.findNext(oStartRange, oSearchDesc)
+
+    If Not IsNull(oFoundRange) Then
+        Dim oText, foundPos, curPos, bSearching
+        oText = oTextCursor.getText()
+        foundPos = oFoundRange.getStart()
+
+        ' Unfortunately, we must go go to this "found" position one character at
+        ' a time because I have yet to find a way to consistently move the
+        ' Start range of the text cursor and leave the End range intact.
+        If bIsBackwards Then
+            curPos = oTextCursor.getEnd()
+        Else
+            curPos = oTextCursor.getStart()
+        End If
+        Do Until oText.compareRegionStarts(foundPos, curPos) = 0
+            If bIsBackwards Then
+                bSearching = oTextCursor.goLeft(1, bExpand)
+                curPos = oTextCursor.getStart()
+            Else
+                bSearching = oTextCursor.goRight(1, bExpand)
+                curPos = oTextCursor.getEnd()
+            End If
+
+            ' Prevent infinite if unable to find, but shouldn't ever happen (?)
+            If Not bSearching Then
+                bMatched = False
+                Exit Do
+            End If
+        Loop
+
+        If searchType = "t" Then
+            oTextCursor.goLeft(1, bExpand)
+        ElseIf searchType = "T" Then
+            oTextCursor.goRight(1, bExpand)
+        End If
+
+    Else
+        bMatched = False
+    End If
+
+    ' If matched, then we want to select PAST the character
+    ' Else, this will counteract some weirdness. hack either way
+    If Not bIsBackwards And MODE = "VISUAL" Then
+        oTextCursor.goRight(1, bExpand)
+    End If
+
+    ProcessSearchKey = bMatched
+
+End Function
 Sub sStartXKeyHandler
     sStopXKeyHandler()
 	
@@ -515,7 +593,7 @@ Function FindMatchingPair(startChar as string, endChar as string, modifier as st
 
     FindMatchingPair = False
 End Function
-Function HandleUnMatchedPairs() as boolean
+Function HandleUnMatchedPairs(keyChar as Integer) as boolean
 	If getMovementModifier() = "iu" or getMovementModifier() = "au" Then
 	   If UNMATCHED_STATE = 0 Then
 			' First keypress after 'u': save the start symbol, wait for end symbol
@@ -527,11 +605,11 @@ Function HandleUnMatchedPairs() as boolean
 			' Extract the "i" or "a" from the modifier string
 			Dim innerOrAround as string
 			innerOrAround = Left(MOVEMENT_MODIFIER, 1)  ' "i" or "a"
-			
+			UNMATCHED_STATE = 2
 			' Reset state after consuming both symbols
-			UNMATCHED_STATE = 0
-			UNTIL_FIRST_SYMBOL = 0
+			
 			HandleUnMatchedPairs = FindMatchingPair(Chr(UNTIL_FIRST_SYMBOL), Chr(keyChar), innerOrAround)
+			UNTIL_FIRST_SYMBOL = 0
 		End If
 	Else
 		HandleUnMatchedPairs = False
@@ -715,8 +793,8 @@ End Function
 Function KeyHandler_KeyPressed(oEvent) as boolean
     Dim oTextCursor
 	Dim consumeInput, IsMultiplier as boolean
-	Dim keyChar as integer
-
+	Dim keyChar, i as integer
+	keyChar = oEvent.KeyChar
     ' Exit if plugin is not enabled
     If IsMissing(VIBREOFFICE_ENABLED) Or Not VIBREOFFICE_ENABLED Then
         KeyHandler_KeyPressed = False
@@ -727,13 +805,22 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
     If oTextCursor Is Nothing Then
         KeyHandler_KeyPressed = False
         Exit Function
-	ElseIf HandleUnMatchedPairs() then
+	ElseIf HandleUnMatchedPairs(keyChar) then
 		KeyHandler_KeyPressed = true
+			If UNMATCHED_STATE = 2 Then
+			yankSelection(True)
+			If getSpecial() = "c" Then
+				gotoMode("INSERT")
+			End If
+			setMovementModifier("")
+			resetSpecial(True)
+			UNMATCHED_STATE = 0
+			End If
 		Exit Function
 	EndIf
 	consumeInput = True
 	IsMultiplier = False
-	keyChar = oEvent.KeyChar
+	
 	KeyHandler_KeyPressed = true
 	Select Case MODE
 		Case "INSERT"
@@ -907,7 +994,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 					End If
 					
 				Case 49,50,51,52,53,54,55,56,57 ' 1-9
-					addToMultiplier(key - 48)
+					addToMultiplier(keyChar - 48)
 					IsMultiplier = True
 					
 				Case 99 'c => change
@@ -927,8 +1014,8 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 						itotalPages = getPageCount()
 						If targetPage > itotalPages Then targetPage = itotalPages
 
-						getCursor().jumpToPage(targetPage, bExpand)
-						oTextCursor.gotoRange(getCursor().getStart(), bExpand)
+						getCursor().jumpToPage(targetPage, False)
+						oTextCursor.gotoRange(getCursor().getStart(), False)
 					Else
 						setSpecial("g") ' gg
 						delaySpecialReset()
@@ -955,12 +1042,14 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 					Exit Function
 
 				Case 73     ' I — INSERT at start of the current line
-					getCursor().gotoStartOfLine(False)
+					getCursor().gotoPreviousParagraph(False)
+					getCursor().goRight(1, False)
 					gotoMode("INSERT")
 					Exit Function
 
 				Case 65     ' A — APPEND at end of the current line
-					getCursor().gotoEndOfLine(False)
+					oTextCursor.gotoNextParagraph(False)
+					oTextCursor.goLeft(1, False)
 					gotoMode("INSERT")
 					Exit Function
 
