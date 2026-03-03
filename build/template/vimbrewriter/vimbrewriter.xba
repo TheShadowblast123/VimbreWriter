@@ -116,12 +116,12 @@ Function gotoMode(sMode)
 			setMode(&quot;VISUAL LINE&quot;)
 		
 			Dim oVC
-            oVC = getTextCursor()
+            oVC = getCursor()
 			
 			oVC.gotoStartOfLine(False)
             oVC.gotoEndOfLine(True)
-			
-			 thisComponent.getCurrentController.Select(oTextCursor)
+            oVC = getCursor()
+			 thisComponent.getCurrentController.Select(oVC)
 		Case &quot;FORMAT&quot;
             setMode(&quot;FORMAT&quot;)
 		Case &quot;COMMAND&quot;
@@ -667,13 +667,13 @@ Function HandleMovements(keyChar As Integer, keyCode As Integer, selecting As Bo
 
         Case 104    &apos; h — left one character per multiplier count
             For i = 1 To getMultiplier()
-                oTC.goLeft(1, selecting)
+                getCursor().goLeft(1, selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
         Case 108    &apos; l — right one character per multiplier count
             For i = 1 To getMultiplier()
-                oTC.goRight(1, selecting)
+                getCursor().goRight(1, selecting)
             Next i
             getCursor().gotoRange(oTC.getStart(), selecting)
 
@@ -1220,7 +1220,7 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 			
 			
 			
-		Case &quot;VISUAL&quot;
+		Case &quot;VISUAL&quot;, &quot;VISUAL LINE&quot;
 		
 			If oEvent.KeyCode = 1281 Then
 
@@ -1387,15 +1387,15 @@ Function KeyHandler_KeyPressed(oEvent) as boolean
 				Exit Function
 			End If
 			
-		Case &quot;VISUAL&quot;
-			If oEvent.KeyCode = 1281 Then
+		&apos; Case &quot;VISUAL LINE&quot;
+			&apos; If oEvent.KeyCode = 1281 Then
 
-				resetSpecial(True)
-				gotoMode(&quot;NORMAL&quot;)
-				KeyHandler_KeyPressed = True
-				cursorReset(oTextCursor)
-				Exit Function
-			End If
+				&apos; resetSpecial(True)
+				&apos; gotoMode(&quot;NORMAL&quot;)
+				&apos; KeyHandler_KeyPressed = True
+				&apos; cursorReset(oTextCursor)
+				&apos; Exit Function
+			&apos; End If
 			
 	End Select
 
